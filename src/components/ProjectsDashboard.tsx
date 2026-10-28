@@ -3,6 +3,7 @@ import {
   FolderOpen, 
   Plus, 
   Search, 
+  X,
   MoreVertical, 
   Code2, 
   Trash2, 
@@ -179,16 +180,24 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
             </p>
           </div>
 
-          {/* Minimal Search Bar */}
-          <div className="relative w-full sm:w-64">
-            <Search size={14} className="absolute ltr:left-3.5 rtl:right-3.5 top-1/2 -translate-y-1/2 text-neutral-500" />
+          {/* Responsive Responsive Search Bar */}
+          <div className="relative w-full sm:w-72 lg:w-96 xl:w-[420px] transition-all duration-300">
+            <Search size={14} className="absolute ltr:left-3.5 rtl:right-3.5 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t.searchProjects}
-              className="w-full bg-white/[0.03] border border-white/[0.06] focus:border-white/20 focus:bg-white/[0.05] rounded-2xl ltr:pl-9 ltr:pr-3.5 rtl:pr-9 rtl:pl-3.5 py-2 text-xs text-white placeholder:text-neutral-600 focus:outline-none transition-all font-light"
+              className="w-full bg-white/[0.03] border border-white/[0.06] hover:border-white/15 focus:border-blue-500/40 focus:bg-white/[0.05] rounded-2xl ltr:pl-9 ltr:pr-9 rtl:pr-9 rtl:pl-9 py-2 text-xs text-white placeholder:text-neutral-600 focus:outline-none transition-all font-light shadow-sm"
             />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute ltr:right-3 rtl:left-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white p-1 rounded-full hover:bg-white/10 transition-all active:scale-90"
+              >
+                <X size={12} />
+              </button>
+            )}
           </div>
         </div>
 
@@ -217,10 +226,10 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
               <div
                 key={project.id}
                 onClick={() => onSelectProject(project.id)}
-                className={`group relative h-44 rounded-3xl p-5 flex flex-col justify-between cursor-pointer transition-all duration-200 active:scale-[0.99] ${
+                className={`group relative h-44 rounded-3xl p-5 flex flex-col justify-between cursor-pointer transition-all duration-300 active:scale-[0.98] hover:scale-[1.015] ${
                   isCurrent
                     ? 'bg-white/[0.045] border border-blue-500/30 shadow-lg shadow-blue-950/20'
-                    : 'bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.06] hover:border-white/[0.12]'
+                    : 'bg-white/[0.02] hover:bg-white/[0.045] border border-white/[0.06] hover:border-white/20 shadow-sm hover:shadow-xl'
                 }`}
               >
                 {/* Card Top: Title & Options Menu */}

@@ -204,6 +204,54 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
+        {/* Direct Layout Switcher Bar for Desktop */}
+        <div className="hidden lg:flex items-center gap-0.5 p-0.5 bg-white/[0.03] border border-white/[0.06] rounded-xl backdrop-blur-2xl">
+          <button
+            onClick={() => onLayoutChange('split-horizontal')}
+            title={t.layoutSplitH}
+            className={`p-1.5 rounded-lg transition-all duration-200 active:scale-95 ${
+              layout === 'split-horizontal'
+                ? 'bg-blue-600/25 text-blue-400 border border-blue-500/30 shadow-sm'
+                : 'text-neutral-400 hover:text-white hover:bg-white/[0.05]'
+            }`}
+          >
+            <Columns2 size={13} />
+          </button>
+          <button
+            onClick={() => onLayoutChange('split-vertical')}
+            title={t.layoutSplitV}
+            className={`p-1.5 rounded-lg transition-all duration-200 active:scale-95 ${
+              layout === 'split-vertical'
+                ? 'bg-blue-600/25 text-blue-400 border border-blue-500/30 shadow-sm'
+                : 'text-neutral-400 hover:text-white hover:bg-white/[0.05]'
+            }`}
+          >
+            <Rows2 size={13} />
+          </button>
+          <button
+            onClick={() => onLayoutChange('editor-only')}
+            title={t.layoutEditorOnly}
+            className={`p-1.5 rounded-lg transition-all duration-200 active:scale-95 ${
+              layout === 'editor-only'
+                ? 'bg-blue-600/25 text-blue-400 border border-blue-500/30 shadow-sm'
+                : 'text-neutral-400 hover:text-white hover:bg-white/[0.05]'
+            }`}
+          >
+            <Code2 size={13} />
+          </button>
+          <button
+            onClick={() => onLayoutChange('preview-only')}
+            title={t.layoutPreviewOnly}
+            className={`p-1.5 rounded-lg transition-all duration-200 active:scale-95 ${
+              layout === 'preview-only'
+                ? 'bg-blue-600/25 text-blue-400 border border-blue-500/30 shadow-sm'
+                : 'text-neutral-400 hover:text-white hover:bg-white/[0.05]'
+            }`}
+          >
+            <Eye size={13} />
+          </button>
+        </div>
+
         {/* Sidebar Toggle for Desktop */}
         <button
           onClick={onToggleSidebar}
@@ -230,8 +278,8 @@ export const Header: React.FC<HeaderProps> = ({
 
           {isOptionsMenuOpen && (
             <div className="absolute ltr:right-0 rtl:left-0 mt-2 w-64 glass-modal rounded-3xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150 font-light">
-              {/* Layout Switcher Section */}
-              <div className="px-2 pt-1 pb-2">
+              {/* Layout Switcher Section (Desktop / Tablet) */}
+              <div className="hidden md:block px-2 pt-1 pb-2">
                 <span className="text-[10px] uppercase tracking-wider text-neutral-500 block mb-1.5 px-1 font-mono">
                   {t.layoutOptions}
                 </span>
@@ -242,7 +290,9 @@ export const Header: React.FC<HeaderProps> = ({
                     }}
                     title={t.layoutSplitH}
                     className={`py-1.5 flex justify-center items-center rounded-xl transition-all ${
-                      layout === 'split-horizontal' ? 'bg-white/10 text-white shadow-sm' : 'text-neutral-500 hover:text-neutral-200'
+                      layout === 'split-horizontal'
+                        ? 'bg-blue-600/25 text-blue-400 border border-blue-500/30 shadow-sm'
+                        : 'text-neutral-500 hover:text-neutral-200'
                     }`}
                   >
                     <Columns2 size={14} />
@@ -253,7 +303,9 @@ export const Header: React.FC<HeaderProps> = ({
                     }}
                     title={t.layoutSplitV}
                     className={`py-1.5 flex justify-center items-center rounded-xl transition-all ${
-                      layout === 'split-vertical' ? 'bg-white/10 text-white shadow-sm' : 'text-neutral-500 hover:text-neutral-200'
+                      layout === 'split-vertical'
+                        ? 'bg-blue-600/25 text-blue-400 border border-blue-500/30 shadow-sm'
+                        : 'text-neutral-500 hover:text-neutral-200'
                     }`}
                   >
                     <Rows2 size={14} />
@@ -264,7 +316,9 @@ export const Header: React.FC<HeaderProps> = ({
                     }}
                     title={t.layoutEditorOnly}
                     className={`py-1.5 flex justify-center items-center rounded-xl transition-all ${
-                      layout === 'editor-only' ? 'bg-white/10 text-white shadow-sm' : 'text-neutral-500 hover:text-neutral-200'
+                      layout === 'editor-only'
+                        ? 'bg-blue-600/25 text-blue-400 border border-blue-500/30 shadow-sm'
+                        : 'text-neutral-500 hover:text-neutral-200'
                     }`}
                   >
                     <Code2 size={14} />
@@ -275,7 +329,9 @@ export const Header: React.FC<HeaderProps> = ({
                     }}
                     title={t.layoutPreviewOnly}
                     className={`py-1.5 flex justify-center items-center rounded-xl transition-all ${
-                      layout === 'preview-only' ? 'bg-white/10 text-white shadow-sm' : 'text-neutral-500 hover:text-neutral-200'
+                      layout === 'preview-only'
+                        ? 'bg-blue-600/25 text-blue-400 border border-blue-500/30 shadow-sm'
+                        : 'text-neutral-500 hover:text-neutral-200'
                     }`}
                   >
                     <Eye size={14} />

@@ -15,6 +15,7 @@ import { ProjectsDashboard } from './components/ProjectsDashboard';
 
 const STORAGE_PROJECTS_KEY = 'studio_lab_projects_v2';
 const STORAGE_CURRENT_PROJECT_KEY = 'studio_lab_current_id_v2';
+const STORAGE_LAYOUT_KEY = 'studio_lab_layout_v2';
 
 function sanitizeProject(p: any, lang: Language): Project {
   const fallback = createStarterProject(lang);
@@ -79,7 +80,15 @@ export default function App() {
   const [lang, setLang] = useState<Language>(getInitialLanguage);
   const [isSaved, setIsSaved] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [layout, setLayout] = useState<LayoutMode>('split-horizontal');
+  const [layout, setLayout] = useState<LayoutMode>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_LAYOUT_KEY);
+      if (saved && ['split-horizontal', 'split-vertical', 'editor-only', 'preview-only'].includes(saved)) {
+        return saved as LayoutMode;
+      }
+    } catch {}
+    return 'split-horizontal';
+  });
   const [modalState, setModalState] = useState<ModalState>({ type: null });
   const [consoleMessages, setConsoleMessages] = useState<ConsoleMessage[]>([]);
   const [mobileTab, setMobileTab] = useState<'editor' | 'preview' | 'files'>('editor');
@@ -150,6 +159,18 @@ export default function App() {
       setIsSaved(true);
     } catch (e) {
       console.error('Failed to persist projects', e);
+    }
+  };
+
+  // Change Layout Mode
+  const handleLayoutChange = (newLayout: LayoutMode) => {
+    setLayout(newLayout);
+    if (newLayout === 'editor-only') setMobileTab('editor');
+    if (newLayout === 'preview-only') setMobileTab('preview');
+    try {
+      localStorage.setItem(STORAGE_LAYOUT_KEY, newLayout);
+    } catch (e) {
+      console.error('Failed to save layout preference', e);
     }
   };
 
@@ -550,7 +571,7 @@ export default function App() {
         currentProject={currentProject}
         allProjects={projects}
         layout={layout}
-        onLayoutChange={setLayout}
+        onLayoutChange={handleLayoutChange}
         lang={lang}
         onLangChange={handleLangChange}
         onSelectProject={(id) => setCurrentProjectId(id)}
@@ -565,10 +586,10 @@ export default function App() {
 
       {/* Main Workspace Canvas */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Mobile Viewports (< md) */}
+        {/* Mobile Viewports (< md) - Clean, Lag-Free Single View Navigation */}
         <div className="flex md:hidden flex-1 flex-col h-full overflow-hidden">
           {mobileTab === 'editor' && (
-            <div className="flex-1 h-full overflow-hidden">
+            <div className="flex-1 h-full overflow-hidden animate-in fade-in duration-150">
               <EditorPane
                 files={currentProject.files}
                 activeFileId={currentProject.activeFileId}
@@ -582,7 +603,7 @@ export default function App() {
           )}
 
           {mobileTab === 'preview' && (
-            <div className="flex-1 h-full overflow-hidden">
+            <div className="flex-1 h-full overflow-hidden animate-in fade-in duration-150">
               <PreviewPane
                 bundledHtml={bundledHtml}
                 consoleMessages={consoleMessages}
@@ -593,7 +614,7 @@ export default function App() {
           )}
 
           {mobileTab === 'files' && (
-            <div className="flex-1 h-full overflow-hidden">
+            <div className="flex-1 h-full overflow-hidden animate-in fade-in duration-150">
               <Sidebar
                 files={currentProject.files}
                 activeFileId={currentProject.activeFileId}
@@ -607,10 +628,10 @@ export default function App() {
           )}
 
           {/* Ultra-Smooth Clean Glass Mobile Bottom Navigation Bar */}
-          <nav className="h-14 bg-[#080b12]/85 backdrop-blur-2xl border-t border-white/[0.05] flex items-center justify-around px-4 select-none shrink-0 z-20 font-light">
+          <nav className="h-14 bg-[#080b12]/90 backdrop-blur-2xl border-t border-white/[0.05] flex items-center justify-around px-4 select-none shrink-0 z-20 font-light">
             <button
               onClick={() => setMobileTab('editor')}
-              className={`flex-1 flex flex-col items-center justify-center py-1.5 gap-1 text-xs transition-all duration-300 active:scale-95 rounded-2xl mx-1 ${
+              className={`flex-1 flex flex-col items-center justify-center py-1.5 gap-1 text-xs transition-all duration-200 active:scale-95 rounded-2xl mx-1 ${
                 mobileTab === 'editor'
                   ? 'text-white bg-white/[0.08] border border-white/[0.08] shadow-sm'
                   : 'text-neutral-500 hover:text-neutral-300'
@@ -662,7 +683,7 @@ export default function App() {
           {/* Dynamic Desktop Layout Workspaces */}
           <div className="flex-1 flex overflow-hidden">
             {layout === 'split-horizontal' && (
-              <div className="flex-1 flex flex-row overflow-hidden">
+              <div className="flex-1 flex flex-row overflow-hidden animate-in fade-in duration-200">
                 <div className="flex-1 h-full overflow-hidden">
                   <EditorPane
                     files={currentProject.files}
@@ -686,7 +707,7 @@ export default function App() {
             )}
 
             {layout === 'split-vertical' && (
-              <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 flex flex-col overflow-hidden animate-in fade-in duration-200">
                 <div className="flex-1 h-1/2 overflow-hidden">
                   <EditorPane
                     files={currentProject.files}
@@ -710,7 +731,7 @@ export default function App() {
             )}
 
             {layout === 'editor-only' && (
-              <div className="flex-1 h-full overflow-hidden">
+              <div className="flex-1 h-full overflow-hidden animate-in fade-in duration-200">
                 <EditorPane
                   files={currentProject.files}
                   activeFileId={currentProject.activeFileId}
@@ -724,7 +745,7 @@ export default function App() {
             )}
 
             {layout === 'preview-only' && (
-              <div className="flex-1 h-full overflow-hidden">
+              <div className="flex-1 h-full overflow-hidden animate-in fade-in duration-200">
                 <PreviewPane
                   bundledHtml={bundledHtml}
                   consoleMessages={consoleMessages}

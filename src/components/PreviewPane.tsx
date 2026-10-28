@@ -40,17 +40,79 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
     window.open(url, '_blank');
   };
 
-  const getDeviceWidthClass = () => {
-    switch (device) {
-      case 'desktop':
-        return 'max-w-[1200px] border border-white/10 rounded-3xl shadow-2xl overflow-hidden';
-      case 'tablet':
-        return 'max-w-[768px] border border-white/10 rounded-3xl shadow-2xl overflow-hidden';
-      case 'mobile':
-        return 'max-w-[375px] border border-white/10 rounded-3xl shadow-2xl overflow-hidden';
-      default:
-        return 'w-full h-full rounded-2xl sm:rounded-3xl overflow-hidden border border-white/[0.06] shadow-xl';
+  const renderContent = () => {
+    const iframeElement = (
+      <iframe
+        key={iframeKey}
+        srcDoc={bundledHtml}
+        title="Studio Lab Preview"
+        sandbox="allow-scripts allow-modals allow-forms allow-same-origin"
+        className="w-full h-full border-none bg-[#090b10] transition-opacity duration-300"
+      />
+    );
+
+    if (device === 'mobile') {
+      return (
+        <div className="w-[360px] max-w-full h-[660px] max-h-[82vh] bg-[#111522] border-2 border-white/15 rounded-[42px] shadow-2xl p-3 flex flex-col items-center relative shrink-0 transition-all duration-300 animate-in zoom-in-95">
+          {/* Top Notch / Dynamic Island */}
+          <div className="w-20 h-4 bg-black/90 rounded-full mb-2 shrink-0 border border-white/10 flex items-center justify-center">
+            <div className="w-2.5 h-2.5 rounded-full bg-neutral-800 border border-neutral-700"></div>
+          </div>
+          {/* Screen Container */}
+          <div className="w-full flex-1 rounded-[28px] overflow-hidden border border-white/10 bg-[#090b10] relative shadow-inner">
+            {iframeElement}
+          </div>
+          {/* Bottom Home Bar */}
+          <div className="w-28 h-1 bg-white/20 rounded-full mt-2.5 shrink-0"></div>
+        </div>
+      );
     }
+
+    if (device === 'tablet') {
+      return (
+        <div className="w-[640px] max-w-full h-[720px] max-h-[85vh] bg-[#111522] border-2 border-white/15 rounded-[32px] shadow-2xl p-3.5 flex flex-col items-center relative shrink-0 transition-all duration-300 animate-in zoom-in-95">
+          {/* Top Camera Dot */}
+          <div className="w-3 h-3 bg-black/90 rounded-full mb-2.5 shrink-0 border border-white/10 flex items-center justify-center">
+            <div className="w-1.5 h-1.5 rounded-full bg-blue-900/60"></div>
+          </div>
+          {/* Screen Container */}
+          <div className="w-full flex-1 rounded-[20px] overflow-hidden border border-white/10 bg-[#090b10] relative shadow-inner">
+            {iframeElement}
+          </div>
+          {/* Bottom Home Indicator */}
+          <div className="w-32 h-1 bg-white/20 rounded-full mt-2.5 shrink-0"></div>
+        </div>
+      );
+    }
+
+    if (device === 'desktop') {
+      return (
+        <div className="w-full max-w-[960px] flex flex-col items-center shrink-0 transition-all duration-300 my-auto animate-in zoom-in-95">
+          {/* Laptop Screen Body */}
+          <div className="w-full bg-[#111522] border-2 border-white/15 rounded-t-2xl shadow-2xl p-2.5 flex flex-col items-center relative">
+            {/* Top Webcam */}
+            <div className="w-2.5 h-2.5 bg-black/90 rounded-full mb-2 border border-white/10 shrink-0 flex items-center justify-center">
+              <div className="w-1 h-1 rounded-full bg-blue-500/80"></div>
+            </div>
+            {/* Screen Content */}
+            <div className="w-full h-[480px] max-h-[60vh] rounded-lg overflow-hidden border border-white/10 bg-[#090b10] relative shadow-inner">
+              {iframeElement}
+            </div>
+          </div>
+          {/* Laptop Bottom Chin / Base */}
+          <div className="w-[103%] h-4 bg-gradient-to-b from-[#1c2232] via-[#141926] to-[#0c0f18] rounded-b-xl border-x border-b border-white/15 shadow-xl flex justify-center items-center shrink-0">
+            <div className="w-12 h-1 bg-white/20 rounded-full"></div>
+          </div>
+        </div>
+      );
+    }
+
+    // Responsive Default Mode
+    return (
+      <div className="w-full h-full rounded-2xl overflow-hidden border border-white/[0.08] bg-[#090b10] shadow-xl transition-all duration-300">
+        {iframeElement}
+      </div>
+    );
   };
 
   return (
@@ -67,37 +129,37 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
               onClick={() => setDevice('responsive')}
               title={t.deviceResponsive}
               className={`p-1.5 rounded-lg transition-all duration-200 active:scale-95 ${
-                device === 'responsive' ? 'bg-white/10 text-white shadow-sm' : 'text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.04]'
+                device === 'responsive' ? 'bg-blue-600/25 text-blue-400 border border-blue-500/30 shadow-sm' : 'text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.04]'
               }`}
             >
-              <Maximize2 size={14} />
+              <Maximize2 size={13} />
             </button>
             <button
               onClick={() => setDevice('desktop')}
               title={t.deviceDesktop}
               className={`p-1.5 rounded-lg transition-all duration-200 active:scale-95 ${
-                device === 'desktop' ? 'bg-white/10 text-white shadow-sm' : 'text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.04]'
+                device === 'desktop' ? 'bg-blue-600/25 text-blue-400 border border-blue-500/30 shadow-sm' : 'text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.04]'
               }`}
             >
-              <Monitor size={14} />
+              <Monitor size={13} />
             </button>
             <button
               onClick={() => setDevice('tablet')}
               title={t.deviceTablet}
               className={`p-1.5 rounded-lg transition-all duration-200 active:scale-95 ${
-                device === 'tablet' ? 'bg-white/10 text-white shadow-sm' : 'text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.04]'
+                device === 'tablet' ? 'bg-blue-600/25 text-blue-400 border border-blue-500/30 shadow-sm' : 'text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.04]'
               }`}
             >
-              <Tablet size={14} />
+              <Tablet size={13} />
             </button>
             <button
               onClick={() => setDevice('mobile')}
               title={t.deviceMobile}
               className={`p-1.5 rounded-lg transition-all duration-200 active:scale-95 ${
-                device === 'mobile' ? 'bg-white/10 text-white shadow-sm' : 'text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.04]'
+                device === 'mobile' ? 'bg-blue-600/25 text-blue-400 border border-blue-500/30 shadow-sm' : 'text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.04]'
               }`}
             >
-              <Smartphone size={14} />
+              <Smartphone size={13} />
             </button>
           </div>
         </div>
@@ -143,16 +205,8 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
       </div>
 
       {/* Live Preview Viewport Canvas */}
-      <div className="flex-1 bg-[#06080c] p-2 sm:p-3 flex items-center justify-center overflow-auto relative w-full">
-        <div className={`h-full w-full flex items-center justify-center transition-all duration-200 ${getDeviceWidthClass()}`}>
-          <iframe
-            key={iframeKey}
-            srcDoc={bundledHtml}
-            title="Studio Lab Preview"
-            sandbox="allow-scripts allow-modals allow-forms allow-same-origin"
-            className="w-full h-full border-none bg-[#090b10]"
-          />
-        </div>
+      <div className="flex-1 bg-[#06080c] p-2 sm:p-4 flex items-center justify-center overflow-auto relative w-full select-none">
+        {renderContent()}
       </div>
 
       {/* Integrated Console Drawer */}
