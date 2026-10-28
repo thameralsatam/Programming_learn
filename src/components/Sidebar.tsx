@@ -215,15 +215,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           >
             <FolderPlus size={14} />
           </button>
-          {onToggleSidebar && (
-            <button
-              onClick={onToggleSidebar}
-              className="p-1.5 text-neutral-400 hover:text-white hover:bg-white/[0.08] active:scale-95 rounded-xl transition-all duration-200"
-              title={t.collapseSidebar}
-            >
-              <PanelLeftClose size={14} />
-            </button>
-          )}
         </div>
       </div>
 

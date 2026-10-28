@@ -170,9 +170,9 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
       {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto px-4 sm:px-8 py-8 sm:py-12 max-w-6xl mx-auto w-full">
         {/* Title & Search Filter */}
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+        <div className="flex flex-col gap-4 mb-8">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-light tracking-tight text-white mb-1.5">
+            <h1 className="text-2xl sm:text-3xl font-light tracking-tight text-white mb-1.5 font-heading">
               {t.dashboardTitle}
             </h1>
             <p className="text-xs sm:text-sm text-neutral-400 font-light leading-relaxed">
@@ -180,22 +180,22 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
             </p>
           </div>
 
-          {/* Responsive Responsive Search Bar */}
-          <div className="relative w-full sm:w-72 lg:w-96 xl:w-[420px] transition-all duration-300">
-            <Search size={14} className="absolute ltr:left-3.5 rtl:right-3.5 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none" />
+          {/* Full-Width Search Bar Below Title */}
+          <div className="relative w-full transition-all duration-300">
+            <Search size={15} className="absolute ltr:left-4 rtl:right-4 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t.searchProjects}
-              className="w-full bg-white/[0.03] border border-white/[0.06] hover:border-white/15 focus:border-blue-500/40 focus:bg-white/[0.05] rounded-2xl ltr:pl-9 ltr:pr-9 rtl:pr-9 rtl:pl-9 py-2 text-xs text-white placeholder:text-neutral-600 focus:outline-none transition-all font-light shadow-sm"
+              className="w-full bg-white/[0.03] border border-white/[0.08] hover:border-white/20 focus:border-blue-500/40 focus:bg-white/[0.05] rounded-2xl ltr:pl-10 ltr:pr-10 rtl:pr-10 rtl:pl-10 py-2.5 text-xs text-white placeholder:text-neutral-500 focus:outline-none transition-all font-light shadow-sm"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute ltr:right-3 rtl:left-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white p-1 rounded-full hover:bg-white/10 transition-all active:scale-90"
+                className="absolute ltr:right-3.5 rtl:left-3.5 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white p-1 rounded-full hover:bg-white/10 transition-all active:scale-90"
               >
-                <X size={12} />
+                <X size={13} />
               </button>
             )}
           </div>

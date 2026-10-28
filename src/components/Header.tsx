@@ -213,54 +213,6 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-        {/* Direct Layout Switcher Bar for Desktop */}
-        <div className="hidden lg:flex items-center gap-0.5 p-0.5 bg-white/[0.03] border border-white/[0.06] rounded-xl backdrop-blur-2xl">
-          <button
-            onClick={() => onLayoutChange('split-horizontal')}
-            title={t.layoutSplitH}
-            className={`p-1.5 rounded-lg transition-all duration-200 active:scale-95 ${
-              layout === 'split-horizontal'
-                ? 'bg-blue-600/25 text-blue-400 border border-blue-500/30 shadow-sm'
-                : 'text-neutral-400 hover:text-white hover:bg-white/[0.05]'
-            }`}
-          >
-            <Columns2 size={13} />
-          </button>
-          <button
-            onClick={() => onLayoutChange('split-vertical')}
-            title={t.layoutSplitV}
-            className={`p-1.5 rounded-lg transition-all duration-200 active:scale-95 ${
-              layout === 'split-vertical'
-                ? 'bg-blue-600/25 text-blue-400 border border-blue-500/30 shadow-sm'
-                : 'text-neutral-400 hover:text-white hover:bg-white/[0.05]'
-            }`}
-          >
-            <Rows2 size={13} />
-          </button>
-          <button
-            onClick={() => onLayoutChange('editor-only')}
-            title={t.layoutEditorOnly}
-            className={`p-1.5 rounded-lg transition-all duration-200 active:scale-95 ${
-              layout === 'editor-only'
-                ? 'bg-blue-600/25 text-blue-400 border border-blue-500/30 shadow-sm'
-                : 'text-neutral-400 hover:text-white hover:bg-white/[0.05]'
-            }`}
-          >
-            <Code2 size={13} />
-          </button>
-          <button
-            onClick={() => onLayoutChange('preview-only')}
-            title={t.layoutPreviewOnly}
-            className={`p-1.5 rounded-lg transition-all duration-200 active:scale-95 ${
-              layout === 'preview-only'
-                ? 'bg-blue-600/25 text-blue-400 border border-blue-500/30 shadow-sm'
-                : 'text-neutral-400 hover:text-white hover:bg-white/[0.05]'
-            }`}
-          >
-            <Eye size={13} />
-          </button>
-        </div>
-
         {/* Sidebar Toggle for Desktop */}
         <button
           onClick={onToggleSidebar}
