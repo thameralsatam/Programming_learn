@@ -11,7 +11,9 @@ import {
   Camera,
   ChevronLeft,
   ChevronRight,
-  Lock
+  Lock,
+  Globe,
+  Home
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { saveAs } from 'file-saver';
@@ -36,7 +38,10 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
   const [isConsoleOpen, setIsConsoleOpen] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
   const [isCapturing, setIsCapturing] = useState(false);
-  const [simulatedUrl, setSimulatedUrl] = useState('studiolab.app/index.html');
+  const [inputUrl, setInputUrl] = useState('studiolab.app/index.html');
+  const [activeExternalUrl, setActiveExternalUrl] = useState<string | null>(null);
+  const [historyStack, setHistoryStack] = useState<string[]>(['studiolab.app/index.html']);
+  const [historyIndex, setHistoryIndex] = useState(0);
   const previewContainerRef = useRef<HTMLDivElement>(null);
 
   const handleRefresh = () => {
@@ -44,9 +49,68 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
   };
 
   const openInNewTab = () => {
-    const blob = new Blob([bundledHtml], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    window.open(url, '_blank');
+    const urlToOpen = activeExternalUrl || URL.createObjectURL(new Blob([bundledHtml], { type: 'text/html' }));
+    window.open(urlToOpen, '_blank');
+  };
+
+  const handleNavigateUrl = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const query = inputUrl.trim();
+    if (!query || query.includes('studiolab.app') || query.includes('index.html')) {
+      setActiveExternalUrl(null);
+      setInputUrl('studiolab.app/index.html');
+      return;
+    }
+
+    let targetUrl = query;
+    if (!/^https?:\/\//i.test(targetUrl)) {
+      if (targetUrl.includes('.') && !targetUrl.includes(' ')) {
+        targetUrl = `https://${targetUrl}`;
+      } else {
+        targetUrl = `https://www.bing.com/search?q=${encodeURIComponent(targetUrl)}`;
+      }
+    }
+
+    setActiveExternalUrl(targetUrl);
+    setInputUrl(targetUrl.replace(/^https?:\/\//i, ''));
+
+    setHistoryStack((prev) => [...prev.slice(0, historyIndex + 1), targetUrl]);
+    setHistoryIndex((prev) => prev + 1);
+  };
+
+  const handleGoBack = () => {
+    if (historyIndex > 0) {
+      const prevIndex = historyIndex - 1;
+      const prevUrl = historyStack[prevIndex];
+      setHistoryIndex(prevIndex);
+      if (prevUrl.includes('studiolab.app')) {
+        setActiveExternalUrl(null);
+        setInputUrl('studiolab.app/index.html');
+      } else {
+        setActiveExternalUrl(prevUrl);
+        setInputUrl(prevUrl.replace(/^https?:\/\//i, ''));
+      }
+    }
+  };
+
+  const handleGoForward = () => {
+    if (historyIndex < historyStack.length - 1) {
+      const nextIndex = historyIndex + 1;
+      const nextUrl = historyStack[nextIndex];
+      setHistoryIndex(nextIndex);
+      if (nextUrl.includes('studiolab.app')) {
+        setActiveExternalUrl(null);
+        setInputUrl('studiolab.app/index.html');
+      } else {
+        setActiveExternalUrl(nextUrl);
+        setInputUrl(nextUrl.replace(/^https?:\/\//i, ''));
+      }
+    }
+  };
+
+  const handleResetToProject = () => {
+    setActiveExternalUrl(null);
+    setInputUrl('studiolab.app/index.html');
   };
 
   const handleCaptureScreenshot = async () => {
@@ -71,7 +135,38 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
   };
 
   const renderContent = () => {
-    const iframeElement = (
+    const iframeElement = activeExternalUrl ? (
+      <div className="relative w-full h-full">
+        <iframe
+          key={`ext_${iframeKey}_${activeExternalUrl}`}
+          src={activeExternalUrl}
+          title="External Web Browser"
+          sandbox="allow-scripts allow-modals allow-forms allow-same-origin allow-popups"
+          className="w-full h-full border-none bg-white"
+        />
+        {/* Floating Quick Action overlay */}
+        <div className="absolute bottom-2 ltr:right-2 rtl:left-2 bg-[#0a0d14]/90 backdrop-blur-xl border border-white/10 rounded-2xl px-3 py-1.5 text-[11px] text-neutral-300 flex items-center gap-2 shadow-2xl z-20 font-light select-none">
+          <span className="truncate max-w-[160px] text-neutral-400 font-mono text-[10px]">{activeExternalUrl}</span>
+          <button
+            onClick={handleResetToProject}
+            className="flex items-center gap-1 px-2 py-0.5 bg-blue-600/30 hover:bg-blue-600/50 text-blue-300 border border-blue-500/40 rounded-lg transition-all active:scale-95 text-[10px]"
+            title="Return to local project code"
+          >
+            <Home size={10} />
+            <span>Code</span>
+          </button>
+          <a
+            href={activeExternalUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-1 hover:text-white transition-colors"
+            title="Open in new window"
+          >
+            <ExternalLink size={12} />
+          </a>
+        </div>
+      </div>
+    ) : (
       <iframe
         key={iframeKey}
         srcDoc={bundledHtml}
@@ -164,16 +259,18 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
         {/* Left: Simulated Browser Back/Forward/Reload Controls */}
         <div className="flex items-center gap-1 shrink-0">
           <button
-            onClick={handleRefresh}
-            className="p-1.5 text-neutral-400 hover:text-white hover:bg-white/[0.06] active:scale-95 rounded-lg transition-all"
-            title={t.refresh}
+            onClick={handleGoBack}
+            disabled={historyIndex <= 0}
+            className="p-1.5 text-neutral-400 hover:text-white hover:bg-white/[0.06] active:scale-95 rounded-lg transition-all disabled:opacity-30 disabled:pointer-events-none"
+            title="Back"
           >
             <ChevronLeft size={14} />
           </button>
           <button
-            onClick={handleRefresh}
-            className="p-1.5 text-neutral-400 hover:text-white hover:bg-white/[0.06] active:scale-95 rounded-lg transition-all"
-            title={t.refresh}
+            onClick={handleGoForward}
+            disabled={historyIndex >= historyStack.length - 1}
+            className="p-1.5 text-neutral-400 hover:text-white hover:bg-white/[0.06] active:scale-95 rounded-lg transition-all disabled:opacity-30 disabled:pointer-events-none"
+            title="Forward"
           >
             <ChevronRight size={14} />
           </button>
@@ -186,16 +283,35 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
           </button>
         </div>
 
-        {/* Center: Simulated Interactive Address Bar */}
-        <div className="flex-1 max-w-sm sm:max-w-md bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.06] focus-within:border-blue-500/40 focus-within:bg-white/[0.06] rounded-xl px-2.5 py-1 flex items-center gap-1.5 text-xs text-neutral-300 transition-all font-mono">
-          <Lock size={11} className="text-emerald-400 shrink-0" />
+        {/* Center: Real Working Interactive Address Bar */}
+        <form 
+          onSubmit={handleNavigateUrl}
+          className="flex-1 max-w-sm sm:max-w-md bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.06] focus-within:border-blue-500/40 focus-within:bg-white/[0.06] rounded-xl px-2.5 py-1 flex items-center gap-1.5 text-xs text-neutral-300 transition-all font-mono"
+        >
+          {activeExternalUrl ? (
+            <Globe size={11} className="text-blue-400 shrink-0" />
+          ) : (
+            <Lock size={11} className="text-emerald-400 shrink-0" />
+          )}
           <input
             type="text"
-            value={simulatedUrl}
-            onChange={(e) => setSimulatedUrl(e.target.value)}
+            value={inputUrl}
+            onChange={(e) => setInputUrl(e.target.value)}
+            placeholder="Type website (e.g. google.com)"
             className="w-full bg-transparent border-none text-[11px] text-neutral-300 focus:outline-none focus:text-white tracking-tight truncate font-mono"
           />
-        </div>
+          {activeExternalUrl && (
+            <button
+              type="button"
+              onClick={handleResetToProject}
+              className="text-[10px] text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 px-1.5 py-0.5 rounded-md transition-all shrink-0 font-sans flex items-center gap-1"
+              title="Return to local project code"
+            >
+              <Home size={10} />
+              <span>Project</span>
+            </button>
+          )}
+        </form>
 
         {/* Right: Device Switcher & Screenshot Action */}
         <div className="flex items-center gap-1.5 shrink-0">
