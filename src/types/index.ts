@@ -28,9 +28,12 @@ export type DeviceMode = 'responsive' | 'desktop' | 'tablet' | 'mobile';
 
 export interface ConsoleMessage {
   id: string;
-  type: 'log' | 'info' | 'warn' | 'error';
+  type: 'log' | 'info' | 'warn' | 'error' | 'debug';
   text: string;
   timestamp: number;
+  stack?: string;
+  origin?: string;
+  count?: number;
 }
 
 export type ModalType = 
@@ -41,6 +44,7 @@ export type ModalType =
   | 'new-folder'
   | 'rename-node'
   | 'delete-node'
+  | 'move-node'
   | 'shortcuts'
   | null;
 
@@ -48,4 +52,5 @@ export interface ModalState {
   type: ModalType;
   targetId?: string;
   initialValue?: string;
+  files?: Record<string, FileNode>;
 }

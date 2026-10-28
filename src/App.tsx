@@ -5,7 +5,7 @@ import { Code2, Eye, Folder } from 'lucide-react';
 import { Project, FileNode, LayoutMode, ModalState, ConsoleMessage, Language, AppView, ModalType } from './types';
 import { translations, getInitialLanguage, saveLanguage } from './translations';
 import { createStarterProject } from './templates/starterProject';
-import { buildPreviewHtml } from './utils/fileHelpers';
+import { buildPreviewHtml, getDescendantIds, getNodePath, hasNameConflict, uniqueName, sortNodes } from './utils/fileHelpers';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { EditorPane } from './components/EditorPane';
@@ -192,18 +192,27 @@ export default function App() {
   };
 
   // Listen for iframe console messages
-  useEffect(() => {
-    function handleMessage(event: MessageEvent) {
-      if (event.data && event.data.source === 'studio-lab-preview') {
-        const newMsg: ConsoleMessage = {
-          id: `msg_${Date.now()}_${Math.random()}`,
-          type: event.data.type || 'log',
-          text: event.data.text || '',
-          timestamp: event.data.timestamp || Date.now(),
-        };
-        setConsoleMessages((prev) => [...prev.slice(-99), newMsg]);
+  function handleMessage(event: MessageEvent) {
+    const d = event.data;
+    if (!d || d.source !== 'studio-lab-preview') return;
+    if (d.type === '__reset') { setConsoleMessages([]); return; }
+    setConsoleMessages((prev) => {
+      const last = prev[prev.length - 1];
+      if (last && last.type === d.type && last.text === d.text && last.origin === d.origin) {
+        return [...prev.slice(0, -1), { ...last, count: (last.count ?? 1) + 1, timestamp: d.timestamp || Date.now() }];
       }
-    }
+      return [...prev.slice(-199), {
+        id: `msg_${Date.now()}_${Math.random()}`,
+        type: d.type || 'log',
+        text: String(d.text ?? ''),
+        stack: d.stack,
+        origin: d.origin,
+        timestamp: d.timestamp || Date.now(),
+        count: 1,
+      }];
+    });
+  }
+  useEffect(() => {
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, []);
@@ -224,11 +233,11 @@ export default function App() {
   }, [projects]);
 
   // Update Project helper
-  const updateCurrentProject = (updater: (p: Project) => Project) => {
+  const updateCurrentProject = (updater: (p: Project) => Project, touch = true) => {
     setProjects((prevProjects) => {
       return prevProjects.map((p) => {
         if (p.id === currentProject.id) {
-          return updater({ ...p, updatedAt: Date.now() });
+          return updater(touch ? { ...p, updatedAt: Date.now() } : p);
         }
         return p;
       });
@@ -292,7 +301,7 @@ export default function App() {
     const parts = orig.name.split('.');
     const ext = parts.length > 1 ? `.${parts.pop()}` : '';
     const baseName = parts.join('.');
-    const newName = `${baseName}-copy${ext}`;
+    const newName = uniqueName(currentProject.files, orig.parentId ?? null, `${baseName}-copy${ext}`);
     const newId = `file_${Date.now()}`;
 
     updateCurrentProject((p) => ({
@@ -332,16 +341,34 @@ export default function App() {
   const handleExportProjectDirect = async (project: Project) => {
     try {
       const zip = new JSZip();
-      (Object.values(project.files || {}) as FileNode[]).forEach((node) => {
-        if (node && node.type === 'file') {
-          zip.file(node.name, node.content || '');
-        }
+      const nodes = Object.values(project.files || {}) as FileNode[];
+      nodes.forEach((node) => {
+        if (!node) return;
+        const path = getNodePath(project.files, node);
+        if (node.type === 'folder') zip.folder(path);
+        else zip.file(path, node.content || '');
       });
       const blob = await zip.generateAsync({ type: 'blob' });
       saveAs(blob, `${project.name.replace(/\s+/g, '_')}.zip`);
     } catch (err) {
       console.error('Failed to export zip', err);
     }
+  };
+
+  const handleMoveNode = (nodeId: string, targetId: string | null) => {
+    updateCurrentProject((p) => {
+      const node = p.files[nodeId];
+      if (!node || (node.parentId ?? null) === targetId) return p;
+      if (targetId) {
+        const target = p.files[targetId];
+        if (!target || target.type !== 'folder') return p;
+        if (targetId === nodeId || getDescendantIds(p.files, nodeId).has(targetId)) return p;
+      }
+      return {
+        ...p,
+        files: { ...p.files, [nodeId]: { ...node, parentId: targetId, name: uniqueName(p.files, targetId, node.name) } },
+      };
+    });
   };
 
   // Modal Handlers
@@ -353,14 +380,23 @@ export default function App() {
       const proj = targetId ? projects.find((p) => p.id === targetId) : currentProject;
       initialValue = proj ? proj.name : currentProject.name;
     }
-    setModalState({ type, targetId, initialValue });
+    setModalState({ type, targetId, initialValue, files: currentProject.files });
   };
 
   const handleCloseModal = () => {
     setModalState({ type: null });
   };
 
+  const validateName = (val: string): string | null => {
+    const { type, targetId } = modalState;
+    if (type !== 'new-file' && type !== 'new-folder' && type !== 'rename-node') return null;
+    if (/[\\/]/.test(val) || val === '.' || val === '..') return t.nameInvalid;
+    const parentId = type === 'rename-node' ? (currentProject.files[targetId ?? '']?.parentId ?? null) : null;
+    return hasNameConflict(currentProject.files, parentId, val, type === 'rename-node' ? targetId : undefined) ? t.nameExists : null;
+  };
+
   const handleModalConfirm = (val?: string) => {
+    if (val && validateName(val)) return;
     const { type, targetId } = modalState;
 
     if (type === 'new-project' && val) {
@@ -449,6 +485,8 @@ export default function App() {
           activeFileId: nextActive,
         };
       });
+    } else if (type === 'move-node' && targetId && val) {
+      handleMoveNode(targetId, val === '__root__' ? null : val);
     }
 
     handleCloseModal();
@@ -468,25 +506,28 @@ export default function App() {
         const zip = new JSZip();
         const loaded = await zip.loadAsync(file);
         const importedFiles: Record<string, FileNode> = {};
+        const folderIds = new Map<string, string>();
+        const ensureFolder = (path: string): string | null => {
+          if (!path) return null;
+          const existing = folderIds.get(path);
+          if (existing) return existing;
+          const idx = path.lastIndexOf('/');
+          const parentId = ensureFolder(idx === -1 ? '' : path.slice(0, idx));
+          const id = `folder_${Date.now()}_${folderIds.size}`;
+          importedFiles[id] = { id, name: idx === -1 ? path : path.slice(idx + 1), type: 'folder', parentId, isOpen: true };
+          folderIds.set(path, id);
+          return id;
+        };
         const openIds: string[] = [];
-
+        let counter = 0;
         for (const [relativePath, zipEntry] of Object.entries(loaded.files)) {
-          if (!zipEntry.dir && !relativePath.startsWith('__MACOSX/')) {
-            const ext = relativePath.split('.').pop()?.toLowerCase();
-            const allowedExts = ['html', 'htm', 'css', 'js', 'mjs', 'json', 'md', 'txt', 'svg'];
-            if (ext && allowedExts.includes(ext)) {
-              const content = await zipEntry.async('string');
-              const fileId = `imported_${Date.now()}_${Math.random()}`;
-              importedFiles[fileId] = {
-                id: fileId,
-                name: relativePath,
-                type: 'file',
-                content,
-                parentId: null,
-              };
-              openIds.push(fileId);
-            }
-          }
+          if (zipEntry.dir || relativePath.startsWith('__MACOSX/') || !/\.(html?|css|m?js|json|md|txt|svg)$/i.test(relativePath)) continue;
+          const idx = relativePath.lastIndexOf('/');
+          const parentId = ensureFolder(idx === -1 ? '' : relativePath.slice(0, idx));
+          const content = await zipEntry.async('string');
+          const fileId = `imported_${Date.now()}_${counter++}`;
+          importedFiles[fileId] = { id: fileId, name: relativePath.slice(idx + 1), type: 'file', content, parentId };
+          openIds.push(fileId);
         }
 
         if (Object.keys(importedFiles).length > 0) {
@@ -497,7 +538,7 @@ export default function App() {
             updatedAt: Date.now(),
             files: importedFiles,
             activeFileId: openIds[0] || null,
-            openFileIds: openIds,
+            openFileIds: openIds.slice(0, 3),
           };
           const updated = [newProj, ...projects];
           setProjects(updated);
@@ -513,10 +554,37 @@ export default function App() {
     }
   };
 
+  // Destinations for move modal
+  const moveTargets = useMemo(() => {
+    if (modalState.type !== 'move-node' || !modalState.targetId) return [];
+    const files = currentProject.files;
+    const node = files[modalState.targetId];
+    if (!node) return [];
+    const blocked = node.type === 'folder' ? new Set<string>([node.id, ...getDescendantIds(files, node.id)]) : new Set<string>();
+    const result: { id: string | null; name: string; depth: number; current: boolean }[] = [
+      { id: null, name: t.rootFolder, depth: 0, current: (node.parentId ?? null) === null },
+    ];
+    const walk = (parentId: string | null, depth: number) => {
+      sortNodes(Object.values(files).filter((f) => f.type === 'folder' && (f.parentId ?? null) === parentId && !blocked.has(f.id)))
+        .forEach((f) => {
+          result.push({ id: f.id, name: f.name, depth, current: node.parentId === f.id });
+          walk(f.id, depth + 1);
+        });
+    };
+    walk(null, 1);
+    return result;
+  }, [modalState, currentProject.files, t]);
+
   // Bundled HTML for preview
   const bundledHtml = useMemo(() => {
     return buildPreviewHtml(currentProject.files);
   }, [currentProject.files]);
+
+  const [previewHtml, setPreviewHtml] = useState(bundledHtml);
+  useEffect(() => {
+    const id = window.setTimeout(() => setPreviewHtml(bundledHtml), 400);
+    return () => window.clearTimeout(id);
+  }, [bundledHtml]);
 
   const t = translations[lang];
 
@@ -535,7 +603,7 @@ export default function App() {
 
   const previewPane = (
     <PreviewPane
-      bundledHtml={bundledHtml}
+      bundledHtml={previewHtml}
       consoleMessages={consoleMessages}
       onClearConsole={() => setConsoleMessages([])}
       lang={lang}
@@ -621,6 +689,7 @@ export default function App() {
                 onSelectFile={handleSelectFile}
                 onOpenFileModal={handleOpenModal}
                 onDuplicateFile={handleDuplicateFile}
+                onMoveNode={handleMoveNode}
                 lang={lang}
                 className="w-full"
               />
@@ -675,6 +744,7 @@ export default function App() {
               onSelectFile={handleSelectFile}
               onOpenFileModal={handleOpenModal}
               onDuplicateFile={handleDuplicateFile}
+              onMoveNode={handleMoveNode}
               lang={lang}
               className="w-60"
             />
@@ -725,6 +795,9 @@ export default function App() {
         onClose={handleCloseModal}
         onConfirm={handleModalConfirm}
         lang={lang}
+        validate={validateName}
+        moveTargets={moveTargets}
+        deleteIsFolder={currentProject.files[modalState.targetId ?? '']?.type === 'folder'}
       />
     </div>
   );

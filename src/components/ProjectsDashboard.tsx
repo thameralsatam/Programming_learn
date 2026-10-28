@@ -100,7 +100,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto px-4 sm:px-8 py-8 sm:py-12 max-w-6xl mx-auto w-full">
+      <main className="flex-1 overflow-y-auto px-4 sm:px-8 py-8 sm:py-12 max-w-6xl mx-auto w-full pb-40">
         {/* Title & Search Filter */}
         <div className="flex flex-col gap-4 mb-8">
           <div>
@@ -149,7 +149,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
           </button>
 
           {/* Project Cards */}
-          {filteredProjects.map((project) => {
+          {[...filteredProjects].sort((a, b) => (b.updatedAt || b.createdAt) - (a.updatedAt || a.createdAt)).map((project) => {
             const fileCount = getFilesStats(project);
             const isCurrent = project.id === currentProjectId;
             const isMenuOpen = activeMenuId === project.id;
@@ -157,8 +157,10 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
             return (
               <div
                 key={project.id}
-                onClick={() => onSelectProject(project.id)}
+                onClick={() => (isMenuOpen ? setActiveMenuId(null) : onSelectProject(project.id))}
                 className={`group relative h-44 rounded-3xl p-5 flex flex-col justify-between cursor-pointer transition-all duration-300 active:scale-[0.98] hover:scale-[1.015] ${
+                  isMenuOpen ? 'z-30' : ''
+                } ${
                   isCurrent
                     ? 'bg-white/[0.045] border border-blue-500/30 shadow-lg shadow-blue-950/20'
                     : 'bg-white/[0.02] hover:bg-white/[0.045] border border-white/[0.06] hover:border-white/20 shadow-sm hover:shadow-xl'

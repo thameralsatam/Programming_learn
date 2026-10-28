@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { 
   RotateCw, 
   Terminal, 
@@ -8,7 +8,11 @@ import {
   Smartphone, 
   Trash2,
   Maximize2,
-  Camera
+  Camera,
+  AlertCircle,
+  AlertTriangle,
+  Info,
+  Copy
 } from 'lucide-react';
 import html2canvas from 'html2canvas-pro';
 import { saveAs } from 'file-saver';
@@ -31,10 +35,37 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
   const t = translations[lang] || translations.de;
   const [device, setDevice] = useState<DeviceMode>('responsive');
   const [isConsoleOpen, setIsConsoleOpen] = useState(false);
+  const [filter, setFilter] = useState<'all' | 'error' | 'warn' | 'info'>('all');
+  const [seenAt, setSeenAt] = useState(0);
   const [iframeKey, setIframeKey] = useState(0);
   const [isCapturing, setIsCapturing] = useState(false);
   const [captureFailed, setCaptureFailed] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  const counts = useMemo(() => ({
+    error: consoleMessages.filter((m) => m.type === 'error').length,
+    warn: consoleMessages.filter((m) => m.type === 'warn').length,
+  }), [consoleMessages]);
+  const visibleMessages = consoleMessages.filter((m) =>
+    filter === 'all' ? true : filter === 'info' ? ['info', 'log', 'debug'].includes(m.type) : m.type === filter
+  );
+  const unseenErrors = consoleMessages.filter((m) => m.type === 'error' && m.timestamp > seenAt).length;
+  const unseenWarns = consoleMessages.filter((m) => m.type === 'warn' && m.timestamp > seenAt).length;
+  const toggleConsole = () => { setSeenAt(Date.now()); setIsConsoleOpen((o) => !o); };
+  useEffect(() => {
+    if (isConsoleOpen) listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
+  }, [consoleMessages, isConsoleOpen, filter]);
+  const copyText = (text: string) => { navigator.clipboard?.writeText(text).catch(() => {}); };
+  const formatMessage = (m: ConsoleMessage) =>
+    `[${m.type.toUpperCase()}] ${m.text}${m.origin ? `\n  at ${m.origin}` : ''}${m.stack ? `\n${m.stack}` : ''}`;
+  const msgStyles: Record<string, string> = {
+    error: 'bg-rose-500/10 text-rose-300 border-rose-500/25',
+    warn: 'bg-amber-500/10 text-amber-200 border-amber-500/25',
+    info: 'bg-sky-500/5 text-sky-200 border-transparent',
+    log: 'text-neutral-300 border-transparent',
+    debug: 'text-neutral-500 border-transparent',
+  };
 
   const handleRefresh = () => {
     setIframeKey((prev) => prev + 1);
@@ -229,7 +260,7 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
 
           {/* Console Toggle */}
           <button
-            onClick={() => setIsConsoleOpen(!isConsoleOpen)}
+            onClick={toggleConsole}
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs transition-all duration-200 active:scale-95 ${
               isConsoleOpen
                 ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30 shadow-sm'
@@ -238,11 +269,8 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
           >
             <Terminal size={13} />
             <span className="hidden lg:inline">{t.console}</span>
-            {consoleMessages.length > 0 && (
-              <span className="text-[10px] bg-blue-500/25 text-blue-400 px-1.5 py-0.5 rounded-full font-mono font-medium">
-                {consoleMessages.length}
-              </span>
-            )}
+            {counts.error > 0 && <span className="text-[10px] bg-rose-500/25 text-rose-300 px-1.5 rounded-full font-mono font-medium">{counts.error}</span>}
+            {counts.warn > 0 && <span className="text-[10px] bg-amber-500/25 text-amber-300 px-1.5 rounded-full font-mono font-medium">{counts.warn}</span>}
           </button>
         </div>
       </div>
@@ -250,45 +278,69 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
       {/* Live Preview Viewport Canvas */}
       <div className="flex-1 bg-[#06080c] p-2 sm:p-4 flex items-center justify-center overflow-auto relative w-full select-none">
         {renderContent()}
+        {!isConsoleOpen && (unseenErrors > 0 || unseenWarns > 0) && (
+          <button
+            onClick={toggleConsole}
+            className={`absolute bottom-3 ltr:right-3 rtl:left-3 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs border backdrop-blur-xl shadow-xl active:scale-95 transition-all ${
+              unseenErrors > 0 ? 'bg-rose-500/20 border-rose-500/40 text-rose-200' : 'bg-amber-500/20 border-amber-500/40 text-amber-200'
+            }`}
+          >
+            {unseenErrors > 0 ? <AlertCircle size={13} /> : <AlertTriangle size={13} />}
+            <span>{unseenErrors > 0 ? `${unseenErrors} ${t.consoleErrors}` : `${unseenWarns} ${t.consoleWarnings}`}</span>
+          </button>
+        )}
       </div>
 
       {/* Integrated Console Drawer */}
       {isConsoleOpen && (
-        <div className="h-44 bg-[#0a0d14]/90 backdrop-blur-xl border-t border-white/[0.08] flex flex-col shrink-0">
-          <div className="h-7 px-3 bg-white/[0.02] border-b border-white/[0.06] flex items-center justify-between text-xs text-neutral-400 font-mono select-none">
-            <span className="flex items-center gap-1.5">
-              <Terminal size={12} className="text-blue-400" />
-              {t.console} ({consoleMessages.length})
-            </span>
-            <button
-              onClick={onClearConsole}
-              className="hover:text-white transition-colors flex items-center gap-1 text-[11px]"
-              title={t.clear}
-            >
-              <Trash2 size={12} />
-              <span>{t.clear}</span>
-            </button>
+        <div className="h-56 bg-[#0a0d14]/90 backdrop-blur-xl border-t border-white/[0.08] flex flex-col shrink-0">
+          <div className="h-8 px-2 bg-white/[0.02] border-b border-white/[0.06] flex items-center justify-between text-xs text-neutral-400 font-mono select-none">
+            <div className="flex items-center gap-1">
+              {([['all', t.consoleAll], ['error', t.consoleErrors], ['warn', t.consoleWarnings], ['info', t.consoleInfo]] as const).map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => setFilter(key)}
+                  className={`px-2 py-1 rounded-lg text-[11px] transition-all ${filter === key ? 'bg-white/[0.1] text-white' : 'hover:text-white'}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={() => copyText(visibleMessages.map(formatMessage).join('\n\n'))} className="hover:text-white transition-colors flex items-center gap-1 text-[11px]" title={t.copyAll}>
+                <Copy size={12} /><span className="hidden sm:inline">{t.copyAll}</span>
+              </button>
+              <button onClick={onClearConsole} className="hover:text-white transition-colors flex items-center gap-1 text-[11px]" title={t.clear}>
+                <Trash2 size={12} /><span className="hidden sm:inline">{t.clear}</span>
+              </button>
+            </div>
           </div>
-
-          <div className="flex-1 overflow-y-auto p-2 font-mono text-xs space-y-1">
-            {consoleMessages.length === 0 ? (
+          <div ref={listRef} className="flex-1 overflow-y-auto p-2 font-mono text-xs space-y-1">
+            {visibleMessages.length === 0 ? (
               <div className="text-neutral-500 italic text-[11px] py-1">{t.noLogs}</div>
             ) : (
-              consoleMessages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] leading-relaxed flex items-start gap-2 ${
-                    msg.type === 'error'
-                      ? 'bg-rose-500/10 text-rose-300 border border-rose-500/20'
-                      : msg.type === 'warn'
-                      ? 'bg-amber-500/10 text-amber-200 border border-amber-500/20'
-                      : 'text-neutral-300 hover:bg-white/[0.04]'
-                  }`}
-                >
-                  <span className="text-neutral-500 select-none text-[10px]">
-                    {new Date(msg.timestamp).toLocaleTimeString()}
-                  </span>
-                  <span className="break-all">{msg.text}</span>
+              visibleMessages.map((m) => (
+                <div key={m.id} className={`group/msg px-2.5 py-1.5 rounded-lg text-[11px] leading-relaxed border ${msgStyles[m.type] ?? msgStyles.log}`}>
+                  <div className="flex items-start gap-2">
+                    <span className="mt-0.5 shrink-0">
+                      {m.type === 'error' ? <AlertCircle size={12} /> : m.type === 'warn' ? <AlertTriangle size={12} /> : m.type === 'info' ? <Info size={12} /> : <span className="inline-block w-3 text-center opacity-50">›</span>}
+                    </span>
+                    <div className="min-w-0 flex-1 select-text">
+                      <div className="whitespace-pre-wrap break-words">{m.text}</div>
+                      {m.origin && <div className="text-[10px] opacity-60 mt-0.5">{m.origin}</div>}
+                      {m.stack && (
+                        <details className="mt-1">
+                          <summary className="cursor-pointer text-[10px] opacity-70">Stack</summary>
+                          <pre className="mt-1 text-[10px] whitespace-pre-wrap break-words opacity-80">{m.stack}</pre>
+                        </details>
+                      )}
+                    </div>
+                    {(m.count ?? 1) > 1 && <span className="shrink-0 text-[10px] px-1.5 rounded-full bg-white/10 font-mono">{m.count}</span>}
+                    <span className="shrink-0 text-[10px] opacity-50">{new Date(m.timestamp).toLocaleTimeString()}</span>
+                    <button onClick={() => copyText(formatMessage(m))} title={t.copy} className="shrink-0 p-1 opacity-100 sm:opacity-0 group-hover/msg:opacity-100 hover:text-white transition-all">
+                      <Copy size={11} />
+                    </button>
+                  </div>
                 </div>
               ))
             )}

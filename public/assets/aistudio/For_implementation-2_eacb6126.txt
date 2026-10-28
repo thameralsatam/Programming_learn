@@ -1,0 +1,280 @@
+5) src/components/Modals.tsx
+1. أضف FolderOpen لاستيراد lucide-react.
+2. أضف للـ props: 
+   validate?: (value: string) => string | null;
+   moveTargets?: { id: string | null; name: string; depth: number; current: boolean }[];
+   deleteIsFolder?: boolean;
+   وفك تفكيكها في المكوّن.
+3. بعد تعريف inputValue أضف:
+   const error = validate && inputValue.trim() ? validate(inputValue.trim()) : null;
+4. في العنوان أضف سطر: {modalState.type === 'move-node' && t.moveToTitle}
+5. أضف فرعاً جديداً (قبل فرع الحذف) لنوع 'move-node':
+   modalState.type === 'move-node' ? (
+     <div className="p-3 max-h-80 overflow-y-auto">
+       {(moveTargets ?? []).map((tg) => (
+         <button
+           key={tg.id ?? '__root__'}
+           disabled={tg.current}
+           onClick={() => onConfirm(tg.id ?? '__root__')}
+           style={{ paddingInlineStart: `${tg.depth * 14 + 12}px` }}
+           className="w-full py-2 pe-3 text-start text-xs rounded-xl flex items-center gap-2 text-neutral-200 hover:bg-white/[0.06] disabled:opacity-40 disabled:pointer-events-none transition-all"
+         >
+           <FolderOpen size={14} className="text-blue-400 shrink-0" />
+           <span className="truncate">{tg.name}</span>
+         </button>
+       ))}
+     </div>
+   ) : 
+6. في فرع الحذف: غيّر النص إلى:
+   {modalState.type === 'delete-project' ? t.deleteProjectConfirm : t.deleteItemConfirm}
+   {modalState.type === 'delete-node' && deleteIsFolder ? ` ${t.deleteFolderWarning}` : ''}
+7. في نموذج الإدخال: تحت الـ input أضف:
+   {error && <p className="mt-1.5 text-[11px] text-rose-400">{error}</p>}
+   وغيّر شرط disabled في زر الإرسال إلى: disabled={!inputValue.trim() || !!error}
+6) src/components/ProjectsDashboard.tsx
+1. في بطاقة المشروع (الـ div الذي فيه key={project.id}):
+   - غيّر onClick إلى: onClick={() => (isMenuOpen ? setActiveMenuId(null) : onSelectProject(project.id))}
+   - أضف للـ className: ${isMenuOpen ? 'z-30' : ''}  (البطاقة أصلاً relative)
+2. في وسم main: أضف pb-40 حتى ما تنقص القائمة عند بطاقات الصف الأخير.
+3. ضع المشاريع المعروضة مرتبة من الأحدث تعديلاً: في filteredProjects اعمل [...list].sort((a, b) => (b.updatedAt || b.createdAt) - (a.updatedAt || a.createdAt)) على النتيجة.
+7) src/components/PreviewPane.tsx (سجل الكونسول)
+1. imports: أضف useEffect و useMemo من react. وأضف من lucide-react: AlertCircle, AlertTriangle, Info, Copy.
+
+2. أضف states:
+   const [filter, setFilter] = useState<'all' | 'error' | 'warn' | 'info'>('all');
+   const [seenAt, setSeenAt] = useState(0);
+   const listRef = useRef<HTMLDivElement>(null);
+
+3. أضف بعد الـ states:
+   const counts = useMemo(() => ({
+     error: consoleMessages.filter((m) => m.type === 'error').length,
+     warn: consoleMessages.filter((m) => m.type === 'warn').length,
+   }), [consoleMessages]);
+   const visibleMessages = consoleMessages.filter((m) =>
+     filter === 'all' ? true : filter === 'info' ? ['info', 'log', 'debug'].includes(m.type) : m.type === filter
+   );
+   const unseenErrors = consoleMessages.filter((m) => m.type === 'error' && m.timestamp > seenAt).length;
+   const unseenWarns = consoleMessages.filter((m) => m.type === 'warn' && m.timestamp > seenAt).length;
+   const toggleConsole = () => { setSeenAt(Date.now()); setIsConsoleOpen((o) => !o); };
+   useEffect(() => {
+     if (isConsoleOpen) listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
+   }, [consoleMessages, isConsoleOpen, filter]);
+   const copyText = (text: string) => { navigator.clipboard?.writeText(text).catch(() => {}); };
+   const formatMessage = (m: ConsoleMessage) =>
+     `[${m.type.toUpperCase()}] ${m.text}${m.origin ? `\n  at ${m.origin}` : ''}${m.stack ? `\n${m.stack}` : ''}`;
+   const msgStyles: Record<string, string> = {
+     error: 'bg-rose-500/10 text-rose-300 border-rose-500/25',
+     warn: 'bg-amber-500/10 text-amber-200 border-amber-500/25',
+     info: 'bg-sky-500/5 text-sky-200 border-transparent',
+     log: 'text-neutral-300 border-transparent',
+     debug: 'text-neutral-500 border-transparent',
+   };
+   (وأضف ConsoleMessage إلى استيراد الأنواع من ../types)
+
+4. زر الكونسول في الشريط: غيّر onClick إلى toggleConsole، واحذف مؤشر العدد الأزرق القديم، وضع بداله:
+   {counts.error > 0 && <span className="text-[10px] bg-rose-500/25 text-rose-300 px-1.5 rounded-full font-mono font-medium">{counts.error}</span>}
+   {counts.warn > 0 && <span className="text-[10px] bg-amber-500/25 text-amber-300 px-1.5 rounded-full font-mono font-medium">{counts.warn}</span>}
+
+5. داخل حاوية المعاينة (div الذي فيه relative و overflow-auto) أضف في آخره إشعاراً عائماً:
+   {!isConsoleOpen && (unseenErrors > 0 || unseenWarns > 0) && (
+     <button
+       onClick={toggleConsole}
+       className={`absolute bottom-3 ltr:right-3 rtl:left-3 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-xs border backdrop-blur-xl shadow-xl active:scale-95 transition-all ${
+         unseenErrors > 0 ? 'bg-rose-500/20 border-rose-500/40 text-rose-200' : 'bg-amber-500/20 border-amber-500/40 text-amber-200'
+       }`}
+     >
+       {unseenErrors > 0 ? <AlertCircle size={13} /> : <AlertTriangle size={13} />}
+       <span>{unseenErrors > 0 ? `${unseenErrors} ${t.consoleErrors}` : `${unseenWarns} ${t.consoleWarnings}`}</span>
+     </button>
+   )}
+
+6. استبدل درج الكونسول كاملاً (الكتلة التي تبدأ بـ {isConsoleOpen && ( ) بهذا:
+   {isConsoleOpen && (
+     <div className="h-56 bg-[#0a0d14]/90 backdrop-blur-xl border-t border-white/[0.08] flex flex-col shrink-0">
+       <div className="h-8 px-2 bg-white/[0.02] border-b border-white/[0.06] flex items-center justify-between text-xs text-neutral-400 font-mono select-none">
+         <div className="flex items-center gap-1">
+           {([['all', t.consoleAll], ['error', t.consoleErrors], ['warn', t.consoleWarnings], ['info', t.consoleInfo]] as const).map(([key, label]) => (
+             <button
+               key={key}
+               onClick={() => setFilter(key)}
+               className={`px-2 py-1 rounded-lg text-[11px] transition-all ${filter === key ? 'bg-white/[0.1] text-white' : 'hover:text-white'}`}
+             >
+               {label}
+             </button>
+           ))}
+         </div>
+         <div className="flex items-center gap-2">
+           <button onClick={() => copyText(visibleMessages.map(formatMessage).join('\n\n'))} className="hover:text-white transition-colors flex items-center gap-1 text-[11px]" title={t.copyAll}>
+             <Copy size={12} /><span className="hidden sm:inline">{t.copyAll}</span>
+           </button>
+           <button onClick={onClearConsole} className="hover:text-white transition-colors flex items-center gap-1 text-[11px]" title={t.clear}>
+             <Trash2 size={12} /><span className="hidden sm:inline">{t.clear}</span>
+           </button>
+         </div>
+       </div>
+       <div ref={listRef} className="flex-1 overflow-y-auto p-2 font-mono text-xs space-y-1">
+         {visibleMessages.length === 0 ? (
+           <div className="text-neutral-500 italic text-[11px] py-1">{t.noLogs}</div>
+         ) : (
+           visibleMessages.map((m) => (
+             <div key={m.id} className={`group/msg px-2.5 py-1.5 rounded-lg text-[11px] leading-relaxed border ${msgStyles[m.type] ?? msgStyles.log}`}>
+               <div className="flex items-start gap-2">
+                 <span className="mt-0.5 shrink-0">
+                   {m.type === 'error' ? <AlertCircle size={12} /> : m.type === 'warn' ? <AlertTriangle size={12} /> : m.type === 'info' ? <Info size={12} /> : <span className="inline-block w-3 text-center opacity-50">›</span>}
+                 </span>
+                 <div className="min-w-0 flex-1 select-text">
+                   <div className="whitespace-pre-wrap break-words">{m.text}</div>
+                   {m.origin && <div className="text-[10px] opacity-60 mt-0.5">{m.origin}</div>}
+                   {m.stack && (
+                     <details className="mt-1">
+                       <summary className="cursor-pointer text-[10px] opacity-70">Stack</summary>
+                       <pre className="mt-1 text-[10px] whitespace-pre-wrap break-words opacity-80">{m.stack}</pre>
+                     </details>
+                   )}
+                 </div>
+                 {(m.count ?? 1) > 1 && <span className="shrink-0 text-[10px] px-1.5 rounded-full bg-white/10 font-mono">{m.count}</span>}
+                 <span className="shrink-0 text-[10px] opacity-50">{new Date(m.timestamp).toLocaleTimeString()}</span>
+                 <button onClick={() => copyText(formatMessage(m))} title={t.copy} className="shrink-0 p-1 opacity-100 sm:opacity-0 group-hover/msg:opacity-100 hover:text-white transition-all">
+                   <Copy size={11} />
+                 </button>
+               </div>
+             </div>
+           ))
+         )}
+       </div>
+     </div>
+   )}
+8) src/App.tsx
+1. استورد من './utils/fileHelpers': buildPreviewHtml, getNodePath, getDescendantIds, hasNameConflict, uniqueName, sortNodes. واستورد ModalType من './types'.
+   انقل سطر const t = translations[lang]; إلى أعلى المكوّن (بعد تعريف lang) لأنه لازم قبل أي useMemo جديد، وكل الـ hooks لازم تكون قبل أول return شرطي.
+
+2. updateCurrentProject: غيّر توقيعه إلى (updater, touch = true) وداخله: updater(touch ? { ...p, updatedAt: Date.now() } : p)
+   ومرّر false في handleSelectFile و handleCloseFile (حتى ما يتغير تاريخ التعديل بمجرد فتح ملف).
+
+3. معالج رسائل المعاينة: استبدل handleMessage كاملة بـ:
+   function handleMessage(event: MessageEvent) {
+     const d = event.data;
+     if (!d || d.source !== 'studio-lab-preview') return;
+     if (d.type === '__reset') { setConsoleMessages([]); return; }
+     setConsoleMessages((prev) => {
+       const last = prev[prev.length - 1];
+       if (last && last.type === d.type && last.text === d.text && last.origin === d.origin) {
+         return [...prev.slice(0, -1), { ...last, count: (last.count ?? 1) + 1, timestamp: d.timestamp || Date.now() }];
+       }
+       return [...prev.slice(-199), {
+         id: `msg_${Date.now()}_${Math.random()}`,
+         type: d.type || 'log',
+         text: String(d.text ?? ''),
+         stack: d.stack,
+         origin: d.origin,
+         timestamp: d.timestamp || Date.now(),
+         count: 1,
+       }];
+     });
+   }
+
+4. تأخير تحديث المعاينة: بعد bundledHtml أضف:
+   const [previewHtml, setPreviewHtml] = useState(bundledHtml);
+   useEffect(() => {
+     const id = window.setTimeout(() => setPreviewHtml(bundledHtml), 400);
+     return () => window.clearTimeout(id);
+   }, [bundledHtml]);
+   ومرّر previewHtml بدل bundledHtml للمكوّن PreviewPane (وبالتحديد في const previewPane).
+
+5. دالة النقل (أضفها):
+   const handleMoveNode = (nodeId: string, targetId: string | null) => {
+     updateCurrentProject((p) => {
+       const node = p.files[nodeId];
+       if (!node || (node.parentId ?? null) === targetId) return p;
+       if (targetId) {
+         const target = p.files[targetId];
+         if (!target || target.type !== 'folder') return p;
+         if (targetId === nodeId || getDescendantIds(p.files, nodeId).has(targetId)) return p;
+       }
+       return {
+         ...p,
+         files: { ...p.files, [nodeId]: { ...node, parentId: targetId, name: uniqueName(p.files, targetId, node.name) } },
+       };
+     });
+   };
+   ومرّرها للـ Sidebar (في المكانين: الجوال والكمبيوتر) بالخاصية onMoveNode={handleMoveNode}.
+
+6. التحقق من الأسماء (أضفها):
+   const validateName = (val: string): string | null => {
+     const { type, targetId } = modalState;
+     if (type !== 'new-file' && type !== 'new-folder' && type !== 'rename-node') return null;
+     if (/[\\/]/.test(val) || val === '.' || val === '..') return t.nameInvalid;
+     const parentId = type === 'rename-node' ? (currentProject.files[targetId ?? '']?.parentId ?? null) : null;
+     return hasNameConflict(currentProject.files, parentId, val, type === 'rename-node' ? targetId : undefined) ? t.nameExists : null;
+   };
+   وفي أول handleModalConfirm: if (val && validateName(val)) return;
+   ملاحظة: الملف الجديد والمجلد الجديد يبقيان دائماً في الجذر (parentId: null) كما هما، والنقل يتم بالسحب أو من قائمة "نقل إلى".
+
+7. وجهات النقل للنافذة (useMemo قبل أي return شرطي):
+   const moveTargets = useMemo(() => {
+     if (modalState.type !== 'move-node' || !modalState.targetId) return [];
+     const files = currentProject.files;
+     const node = files[modalState.targetId];
+     if (!node) return [];
+     const blocked = node.type === 'folder' ? new Set<string>([node.id, ...getDescendantIds(files, node.id)]) : new Set<string>();
+     const result: { id: string | null; name: string; depth: number; current: boolean }[] = [
+       { id: null, name: t.rootFolder, depth: 0, current: (node.parentId ?? null) === null },
+     ];
+     const walk = (parentId: string | null, depth: number) => {
+       sortNodes(Object.values(files).filter((f) => f.type === 'folder' && (f.parentId ?? null) === parentId && !blocked.has(f.id)))
+         .forEach((f) => {
+           result.push({ id: f.id, name: f.name, depth, current: node.parentId === f.id });
+           walk(f.id, depth + 1);
+         });
+     };
+     walk(null, 1);
+     return result;
+   }, [modalState, currentProject.files, t]);
+
+8. في handleModalConfirm أضف فرعاً:
+   else if (type === 'move-node' && targetId && val) {
+     handleMoveNode(targetId, val === '__root__' ? null : val);
+   }
+   ومرّر لكل استخدامات <Modals>: validate={validateName} moveTargets={moveTargets} deleteIsFolder={currentProject.files[modalState.targetId ?? '']?.type === 'folder'}
+
+9. النسخ المكرر: في handleDuplicateFile استبدل حساب newName بـ:
+   const newName = uniqueName(currentProject.files, orig.parentId ?? null, `${baseName}-copy${ext}`);
+
+10. التصدير يحافظ على المجلدات: استبدل جسم handleExportProjectDirect (داخل try) بـ:
+   const zip = new JSZip();
+   const nodes = Object.values(project.files || {}) as FileNode[];
+   nodes.forEach((node) => {
+     if (!node) return;
+     const path = getNodePath(project.files, node);
+     if (node.type === 'folder') zip.folder(path);
+     else zip.file(path, node.content || '');
+   });
+   const blob = await zip.generateAsync({ type: 'blob' });
+   saveAs(blob, `${project.name.replace(/\s+/g, '_')}.zip`);
+
+11. الاستيراد يبني مجلدات حقيقية: داخل handleFileImport استبدل حلقة بناء importedFiles بـ:
+   const importedFiles: Record<string, FileNode> = {};
+   const folderIds = new Map<string, string>();
+   const ensureFolder = (path: string): string | null => {
+     if (!path) return null;
+     const existing = folderIds.get(path);
+     if (existing) return existing;
+     const idx = path.lastIndexOf('/');
+     const parentId = ensureFolder(idx === -1 ? '' : path.slice(0, idx));
+     const id = `folder_${Date.now()}_${folderIds.size}`;
+     importedFiles[id] = { id, name: idx === -1 ? path : path.slice(idx + 1), type: 'folder', parentId, isOpen: true };
+     folderIds.set(path, id);
+     return id;
+   };
+   const openIds: string[] = [];
+   let counter = 0;
+   for (const [relativePath, zipEntry] of Object.entries(loaded.files)) {
+     if (zipEntry.dir || relativePath.startsWith('__MACOSX/') || !/\.(html?|css|m?js|json|md|txt|svg)$/i.test(relativePath)) continue;
+     const idx = relativePath.lastIndexOf('/');
+     const parentId = ensureFolder(idx === -1 ? '' : relativePath.slice(0, idx));
+     const content = await zipEntry.async('string');
+     const fileId = `imported_${Date.now()}_${counter++}`;
+     importedFiles[fileId] = { id: fileId, name: relativePath.slice(idx + 1), type: 'file', content, parentId };
+     openIds.push(fileId);
+   }
+   (والباقي كما هو، مع إبقاء openIds.slice(0, 3) كتبويبات مفتوحة بدل فتح الكل).

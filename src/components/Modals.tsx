@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { X, AlertTriangle } from 'lucide-react';
+import { X, AlertTriangle, Folder, FolderOpen } from 'lucide-react';
 import { ModalState, Language } from '../types';
 import { translations } from '../translations';
+import { getDescendantIds } from '../utils/fileHelpers';
 
 interface ModalsProps {
   modalState: ModalState;
   onClose: () => void;
   onConfirm: (val?: string) => void;
   lang: Language;
+  validate?: (value: string) => string | null;
+  moveTargets?: { id: string | null; name: string; depth: number; current: boolean }[];
+  deleteIsFolder?: boolean;
 }
 
 export const Modals: React.FC<ModalsProps> = ({
@@ -15,9 +19,13 @@ export const Modals: React.FC<ModalsProps> = ({
   onClose,
   onConfirm,
   lang,
+  validate,
+  moveTargets,
+  deleteIsFolder,
 }) => {
   const t = translations[lang];
   const [inputValue, setInputValue] = useState('');
+  const error = validate && inputValue.trim() ? validate(inputValue.trim()) : null;
 
   useEffect(() => {
     setInputValue(modalState.initialValue ?? '');
@@ -27,6 +35,7 @@ export const Modals: React.FC<ModalsProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (inputValue && validate && validate(inputValue.trim())) return;
     onConfirm(inputValue.trim());
   };
 
@@ -49,6 +58,7 @@ export const Modals: React.FC<ModalsProps> = ({
             {modalState.type === 'new-folder' && t.createFolderTitle}
             {modalState.type === 'rename-node' && t.renameItemTitle}
             {modalState.type === 'delete-node' && t.deleteItemTitle}
+            {modalState.type === 'move-node' && t.moveToTitle}
             {modalState.type === 'shortcuts' && t.shortcuts}
           </h3>
           <button
@@ -87,6 +97,7 @@ export const Modals: React.FC<ModalsProps> = ({
               </div>
               <p className="text-xs text-neutral-300 leading-relaxed pt-1">
                 {modalState.type === 'delete-project' ? t.deleteProjectConfirm : t.deleteItemConfirm}
+                {modalState.type === 'delete-node' && deleteIsFolder ? ` ${t.deleteFolderWarning}` : ''}
               </p>
             </div>
             <div className="flex items-center justify-end gap-2.5 pt-2">
@@ -105,6 +116,21 @@ export const Modals: React.FC<ModalsProps> = ({
                 {t.delete}
               </button>
             </div>
+          </div>
+        ) : modalState.type === 'move-node' ? (
+          <div className="p-3 max-h-80 overflow-y-auto">
+            {(moveTargets ?? []).map((tg) => (
+              <button
+                key={tg.id ?? '__root__'}
+                disabled={tg.current}
+                onClick={() => onConfirm(tg.id ?? '__root__')}
+                style={{ paddingInlineStart: `${tg.depth * 14 + 12}px` }}
+                className="w-full py-2 pe-3 text-start text-xs rounded-xl flex items-center gap-2 text-neutral-200 hover:bg-white/[0.06] disabled:opacity-40 disabled:pointer-events-none transition-all"
+              >
+                <FolderOpen size={14} className="text-blue-400 shrink-0" />
+                <span className="truncate">{tg.name}</span>
+              </button>
+            ))}
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-6 space-y-4 font-light">
@@ -130,6 +156,7 @@ export const Modals: React.FC<ModalsProps> = ({
                 autoFocus
                 className="w-full bg-white/[0.03] border border-white/[0.08] focus:border-white/20 focus:bg-white/[0.06] rounded-2xl px-3.5 py-2.5 text-xs text-white focus:outline-none transition-all placeholder:text-neutral-600 shadow-inner font-light"
               />
+              {error && <p className="mt-1.5 text-[11px] text-rose-400">{error}</p>}
             </div>
 
             <div className="flex items-center justify-end gap-2.5 pt-2">
@@ -142,7 +169,7 @@ export const Modals: React.FC<ModalsProps> = ({
               </button>
               <button
                 type="submit"
-                disabled={!inputValue.trim()}
+                disabled={!inputValue.trim() || !!error}
                 className="px-4 py-2 text-xs text-white bg-blue-600/90 hover:bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 rounded-2xl font-light shadow-sm shadow-blue-600/25 transition-all"
               >
                 {modalState.type === 'rename-project' || modalState.type === 'rename-node'

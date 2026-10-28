@@ -26,6 +26,12 @@ export const translations = {
     expandSidebar: 'Sidebar ausklappen',
     emptyFolder: 'Ordner ist leer',
     noFilesFound: 'Keine Dateien geöffnet',
+    moveTo: 'Verschieben nach…',
+    moveToTitle: 'Element verschieben',
+    rootFolder: 'Hauptverzeichnis',
+    nameExists: 'Dieser Name existiert hier bereits',
+    nameInvalid: 'Ungültiger Name (kein / oder \\)',
+    deleteFolderWarning: 'Der gesamte Inhalt des Ordners wird ebenfalls gelöscht.',
     
     // Actions
     saved: 'Gespeichert',
@@ -46,6 +52,8 @@ export const translations = {
     screenshot: 'Screenshot speichern',
     screenshotFailed: 'Screenshot fehlgeschlagen',
     openNewWindow: 'In neuem Tab öffnen',
+    copy: 'Kopieren',
+    copyAll: 'Alles kopieren',
     
     // Layouts & Views
     layoutSplitH: 'Geteilt (Horizontal)',
@@ -90,6 +98,10 @@ export const translations = {
 
     // Console
     noLogs: 'Keine Konsolenausgaben vorhanden.',
+    consoleAll: 'Alle',
+    consoleErrors: 'Fehler',
+    consoleWarnings: 'Warnungen',
+    consoleInfo: 'Info',
   },
   en: {
     brandName: 'Studio Lab',
@@ -116,6 +128,12 @@ export const translations = {
     expandSidebar: 'Expand sidebar',
     emptyFolder: 'Folder is empty',
     noFilesFound: 'No files open',
+    moveTo: 'Move to…',
+    moveToTitle: 'Move item',
+    rootFolder: 'Root',
+    nameExists: 'This name already exists here',
+    nameInvalid: 'Invalid name (no / or \\)',
+    deleteFolderWarning: 'All contents of the folder will be deleted too.',
     
     // Actions
     saved: 'Saved',
@@ -136,6 +154,8 @@ export const translations = {
     screenshot: 'Save screenshot',
     screenshotFailed: 'Screenshot failed',
     openNewWindow: 'Open in new tab',
+    copy: 'Copy',
+    copyAll: 'Copy all',
     
     // Layouts & Views
     layoutSplitH: 'Split (Horizontal)',
@@ -180,6 +200,10 @@ export const translations = {
 
     // Console
     noLogs: 'No console logs yet.',
+    consoleAll: 'All',
+    consoleErrors: 'Errors',
+    consoleWarnings: 'Warnings',
+    consoleInfo: 'Info',
   },
   ar: {
     brandName: 'Studio Lab',
@@ -206,6 +230,12 @@ export const translations = {
     expandSidebar: 'توسيع الشريط الجانبي',
     emptyFolder: 'المجلد فارغ',
     noFilesFound: 'لا توجد ملفات مفتوحة',
+    moveTo: 'نقل إلى…',
+    moveToTitle: 'نقل العنصر',
+    rootFolder: 'المجلد الرئيسي',
+    nameExists: 'هذا الاسم موجود مسبقاً هنا',
+    nameInvalid: 'اسم غير صالح (بدون / أو \\)',
+    deleteFolderWarning: 'سيتم حذف كل محتويات المجلد أيضاً.',
     
     // Actions
     saved: 'تم الحفظ',
@@ -226,6 +256,8 @@ export const translations = {
     screenshot: 'حفظ لقطة شاشة',
     screenshotFailed: 'فشل التقاط الصورة',
     openNewWindow: 'فتح في تبويب جديد',
+    copy: 'نسخ',
+    copyAll: 'نسخ الكل',
     
     // Layouts & Views
     layoutSplitH: 'انقسام أفقي',
@@ -270,6 +302,10 @@ export const translations = {
 
     // Console
     noLogs: 'لا توجد سجلات حتى الآن.',
+    consoleAll: 'الكل',
+    consoleErrors: 'أخطاء',
+    consoleWarnings: 'تحذيرات',
+    consoleInfo: 'معلومات',
   }
 };
 
