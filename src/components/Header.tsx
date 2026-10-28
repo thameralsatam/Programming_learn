@@ -6,7 +6,6 @@ import {
   Eye, 
   Download, 
   Upload, 
-  Plus, 
   Keyboard, 
   FolderOpen, 
   ChevronDown, 
@@ -92,13 +91,13 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="h-12 bg-[#080b12]/80 backdrop-blur-2xl border-b border-white/[0.05] px-3 sm:px-5 flex items-center justify-between select-none shrink-0 z-30 font-light transition-colors">
+    <header className="h-14 bg-[#080b12]/80 backdrop-blur-2xl border-b border-white/[0.05] px-3 sm:px-5 flex items-center justify-between select-none shrink-0 z-30 font-light transition-colors">
       {/* Left: Navigation back to Projects Dashboard & Project Selector */}
       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         {/* Back to Projects Dashboard */}
         <button
           onClick={onNavigateToDashboard}
-          className="flex items-center gap-1.5 px-2 py-1 text-xs text-neutral-400 hover:text-white hover:bg-white/[0.05] active:scale-95 rounded-xl transition-all duration-200"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-neutral-400 hover:text-white hover:bg-white/[0.05] active:scale-95 rounded-xl transition-all duration-200"
           title={t.dashboardTitle}
         >
           <ArrowLeft size={13} className="text-neutral-500 rtl:rotate-180 transition-transform" />
@@ -111,7 +110,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="relative min-w-0" ref={dropdownRef}>
           <button
             onClick={() => setIsProjectsDropdownOpen(!isProjectsDropdownOpen)}
-            className="flex items-center gap-1.5 text-xs font-light text-neutral-200 hover:text-white bg-white/[0.03] hover:bg-white/[0.06] active:scale-[0.98] border border-white/[0.06] hover:border-white/15 px-2.5 py-1.2 rounded-xl transition-all duration-200 max-w-[130px] sm:max-w-[200px]"
+            className="flex items-center gap-1.5 text-xs font-light text-neutral-200 hover:text-white bg-white/[0.03] hover:bg-white/[0.06] active:scale-[0.98] border border-white/[0.06] hover:border-white/15 px-3 py-1.5 rounded-xl transition-all duration-200 max-w-[140px] sm:max-w-[210px]"
           >
             <FolderOpen size={13} className="text-blue-400/90 shrink-0" />
             <span className="truncate">{currentProject.name}</span>
@@ -156,7 +155,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="relative" ref={langRef}>
           <button
             onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
-            className="flex items-center gap-1.5 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] hover:border-white/15 px-2.5 py-1.2 rounded-xl text-xs text-neutral-300 hover:text-white transition-all duration-200 font-light active:scale-95"
+            className="flex items-center gap-1.5 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] hover:border-white/15 px-3 py-1.5 rounded-xl text-xs text-neutral-300 hover:text-white transition-all duration-200 font-light active:scale-95"
           >
             <Globe size={13} className="text-neutral-400" />
             <span>{getLangName(lang)}</span>
@@ -208,13 +207,13 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Sidebar Toggle for Desktop */}
         <button
           onClick={onToggleSidebar}
-          className="hidden md:flex p-1.5 text-neutral-400 hover:text-white hover:bg-white/[0.06] active:scale-95 rounded-xl transition-all duration-200"
+          className="hidden md:flex p-2 text-neutral-400 hover:text-white hover:bg-white/[0.06] active:scale-95 rounded-xl transition-all duration-200"
           title={isSidebarOpen ? t.collapseSidebar : t.expandSidebar}
         >
           {isSidebarOpen ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
         </button>
 
-        {/* Unified Options Menu Button (Consolidates all tools into one sleek button) */}
+        {/* Unified Options Menu Button */}
         <div className="relative" ref={optionsRef}>
           <button
             onClick={() => setIsOptionsMenuOpen(!isOptionsMenuOpen)}
@@ -288,16 +287,6 @@ export const Header: React.FC<HeaderProps> = ({
 
               {/* Actions Section */}
               <div className="space-y-0.5">
-                <button
-                  onClick={() => {
-                    setIsOptionsMenuOpen(false);
-                    onOpenModal('new-project');
-                  }}
-                  className="w-full px-3 py-2 text-start text-xs text-neutral-200 hover:text-white hover:bg-white/[0.06] rounded-2xl flex items-center gap-2.5 transition-all"
-                >
-                  <Plus size={14} className="text-blue-400" />
-                  <span>{t.newProject}</span>
-                </button>
                 <button
                   onClick={() => {
                     setIsOptionsMenuOpen(false);

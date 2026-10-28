@@ -50,6 +50,10 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
       if (langRef.current && !langRef.current.contains(e.target as Node)) {
         setIsLangDropdownOpen(false);
       }
+      const target = e.target as HTMLElement;
+      if (!target.closest('.card-menu-container')) {
+        setActiveMenuId(null);
+      }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -111,7 +115,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
           <div className="relative" ref={langRef}>
             <button
               onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
-              className="flex items-center gap-1.5 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] hover:border-white/15 px-2.5 py-1.2 rounded-xl text-xs text-neutral-300 hover:text-white transition-all duration-200 font-light active:scale-95"
+              className="flex items-center gap-1.5 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] hover:border-white/15 px-3 py-1.5 rounded-xl text-xs text-neutral-300 hover:text-white transition-all duration-200 font-light active:scale-95"
             >
               <Globe size={13} className="text-neutral-400" />
               <span>{getLangName(lang)}</span>
@@ -159,15 +163,6 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
               </div>
             )}
           </div>
-
-          {/* Primary New Project Action */}
-          <button
-            onClick={() => onOpenModal('new-project')}
-            className="flex items-center gap-1.5 text-xs text-white font-light bg-blue-600/90 hover:bg-blue-600 active:scale-95 px-3.5 py-1.5 rounded-xl transition-all duration-200 shadow-sm shadow-blue-600/25"
-          >
-            <Plus size={14} />
-            <span>{t.newProject}</span>
-          </button>
         </div>
       </header>
 
@@ -251,7 +246,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                   </div>
 
                   {/* Options Menu Trigger */}
-                  <div className="relative" onClick={(e) => e.stopPropagation()}>
+                  <div className="relative card-menu-container" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => setActiveMenuId(isMenuOpen ? null : project.id)}
                       className="p-1.5 text-neutral-500 hover:text-white hover:bg-white/[0.08] active:scale-95 rounded-xl transition-all"
