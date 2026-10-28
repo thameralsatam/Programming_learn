@@ -677,6 +677,7 @@ export default function App() {
               onDuplicateFile={handleDuplicateFile}
               lang={lang}
               className="w-60"
+              onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
             />
           )}
 

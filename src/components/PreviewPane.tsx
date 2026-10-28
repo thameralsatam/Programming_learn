@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   RotateCw, 
   Terminal, 
@@ -7,8 +7,14 @@ import {
   Tablet, 
   Smartphone, 
   Trash2,
-  Maximize2
+  Maximize2,
+  Camera,
+  ChevronLeft,
+  ChevronRight,
+  Lock
 } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import { saveAs } from 'file-saver';
 import { DeviceMode, ConsoleMessage, Language } from '../types';
 import { translations } from '../translations';
 
@@ -25,10 +31,13 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
   onClearConsole,
   lang,
 }) => {
-  const t = translations[lang];
+  const t = translations[lang] || translations.de;
   const [device, setDevice] = useState<DeviceMode>('responsive');
   const [isConsoleOpen, setIsConsoleOpen] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const [simulatedUrl, setSimulatedUrl] = useState('studiolab.app/index.html');
+  const previewContainerRef = useRef<HTMLDivElement>(null);
 
   const handleRefresh = () => {
     setIframeKey((prev) => prev + 1);
@@ -38,6 +47,27 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
     const blob = new Blob([bundledHtml], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     window.open(url, '_blank');
+  };
+
+  const handleCaptureScreenshot = async () => {
+    if (!previewContainerRef.current) return;
+    try {
+      setIsCapturing(true);
+      const canvas = await html2canvas(previewContainerRef.current, {
+        useCORS: true,
+        scale: 2,
+        backgroundColor: '#090b10',
+      });
+      canvas.toBlob((blob) => {
+        if (blob) {
+          saveAs(blob, `studio_preview_${device}_${Date.now()}.png`);
+        }
+        setIsCapturing(false);
+      });
+    } catch (err) {
+      console.error('Failed to take screenshot', err);
+      setIsCapturing(false);
+    }
   };
 
   const renderContent = () => {
@@ -53,7 +83,10 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
 
     if (device === 'mobile') {
       return (
-        <div className="w-[360px] max-w-full h-[660px] max-h-[82vh] bg-[#111522] border-2 border-white/15 rounded-[42px] shadow-2xl p-3 flex flex-col items-center relative shrink-0 transition-all duration-300 animate-in zoom-in-95">
+        <div 
+          ref={previewContainerRef}
+          className="w-[360px] max-w-full h-[660px] max-h-[82vh] bg-[#111522] border-2 border-white/15 rounded-[42px] shadow-2xl p-3 flex flex-col items-center relative shrink-0 transition-all duration-300 animate-in zoom-in-95"
+        >
           {/* Top Notch / Dynamic Island */}
           <div className="w-20 h-4 bg-black/90 rounded-full mb-2 shrink-0 border border-white/10 flex items-center justify-center">
             <div className="w-2.5 h-2.5 rounded-full bg-neutral-800 border border-neutral-700"></div>
@@ -70,7 +103,10 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
 
     if (device === 'tablet') {
       return (
-        <div className="w-[640px] max-w-full h-[720px] max-h-[85vh] bg-[#111522] border-2 border-white/15 rounded-[32px] shadow-2xl p-3.5 flex flex-col items-center relative shrink-0 transition-all duration-300 animate-in zoom-in-95">
+        <div 
+          ref={previewContainerRef}
+          className="w-[640px] max-w-full h-[720px] max-h-[85vh] bg-[#111522] border-2 border-white/15 rounded-[32px] shadow-2xl p-3.5 flex flex-col items-center relative shrink-0 transition-all duration-300 animate-in zoom-in-95"
+        >
           {/* Top Camera Dot */}
           <div className="w-3 h-3 bg-black/90 rounded-full mb-2.5 shrink-0 border border-white/10 flex items-center justify-center">
             <div className="w-1.5 h-1.5 rounded-full bg-blue-900/60"></div>
@@ -87,7 +123,10 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
 
     if (device === 'desktop') {
       return (
-        <div className="w-full max-w-[960px] flex flex-col items-center shrink-0 transition-all duration-300 my-auto animate-in zoom-in-95">
+        <div 
+          ref={previewContainerRef}
+          className="w-full max-w-[960px] flex flex-col items-center shrink-0 transition-all duration-300 my-auto animate-in zoom-in-95"
+        >
           {/* Laptop Screen Body */}
           <div className="w-full bg-[#111522] border-2 border-white/15 rounded-t-2xl shadow-2xl p-2.5 flex flex-col items-center relative">
             {/* Top Webcam */}
@@ -109,7 +148,10 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
 
     // Responsive Default Mode
     return (
-      <div className="w-full h-full rounded-2xl overflow-hidden border border-white/[0.08] bg-[#090b10] shadow-xl transition-all duration-300">
+      <div 
+        ref={previewContainerRef}
+        className="w-full h-full rounded-2xl overflow-hidden border border-white/[0.08] bg-[#090b10] shadow-xl transition-all duration-300"
+      >
         {iframeElement}
       </div>
     );
@@ -117,14 +159,48 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
 
   return (
     <div className="flex-1 flex flex-col h-full w-full bg-[#06080e] ltr:border-l rtl:border-r border-white/[0.05] overflow-hidden font-light">
-      {/* Preview Toolbar */}
-      <div className="h-10 bg-[#080b12]/80 backdrop-blur-2xl border-b border-white/[0.05] px-3 flex items-center justify-between select-none shrink-0">
-        {/* Left: Device Presets on Desktop, Title on Mobile */}
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs font-light text-neutral-300 sm:hidden">
-            {t.preview}
-          </span>
-          <div className="hidden sm:flex items-center gap-1 p-0.5 bg-white/[0.03] border border-white/[0.06] rounded-2xl backdrop-blur-2xl">
+      {/* Sleek Browser-Style Navigation & Device Control Header */}
+      <div className="h-11 bg-[#080b12]/90 backdrop-blur-2xl border-b border-white/[0.06] px-3 flex items-center justify-between gap-2 select-none shrink-0 z-10">
+        {/* Left: Simulated Browser Back/Forward/Reload Controls */}
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            onClick={handleRefresh}
+            className="p-1.5 text-neutral-400 hover:text-white hover:bg-white/[0.06] active:scale-95 rounded-lg transition-all"
+            title={t.refresh}
+          >
+            <ChevronLeft size={14} />
+          </button>
+          <button
+            onClick={handleRefresh}
+            className="p-1.5 text-neutral-400 hover:text-white hover:bg-white/[0.06] active:scale-95 rounded-lg transition-all"
+            title={t.refresh}
+          >
+            <ChevronRight size={14} />
+          </button>
+          <button
+            onClick={handleRefresh}
+            className="p-1.5 text-neutral-400 hover:text-white hover:bg-white/[0.06] active:scale-95 rounded-lg transition-all"
+            title={t.refresh}
+          >
+            <RotateCw size={13} />
+          </button>
+        </div>
+
+        {/* Center: Simulated Interactive Address Bar */}
+        <div className="flex-1 max-w-sm sm:max-w-md bg-white/[0.03] hover:bg-white/[0.05] border border-white/[0.06] focus-within:border-blue-500/40 focus-within:bg-white/[0.06] rounded-xl px-2.5 py-1 flex items-center gap-1.5 text-xs text-neutral-300 transition-all font-mono">
+          <Lock size={11} className="text-emerald-400 shrink-0" />
+          <input
+            type="text"
+            value={simulatedUrl}
+            onChange={(e) => setSimulatedUrl(e.target.value)}
+            className="w-full bg-transparent border-none text-[11px] text-neutral-300 focus:outline-none focus:text-white tracking-tight truncate font-mono"
+          />
+        </div>
+
+        {/* Right: Device Switcher & Screenshot Action */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {/* Device Selector */}
+          <div className="hidden sm:flex items-center gap-0.5 p-0.5 bg-white/[0.03] border border-white/[0.06] rounded-xl backdrop-blur-2xl">
             <button
               onClick={() => setDevice('responsive')}
               title={t.deviceResponsive}
@@ -162,35 +238,15 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
               <Smartphone size={13} />
             </button>
           </div>
-        </div>
 
-        {/* Right: Actions */}
-        <div className="flex items-center gap-1.5">
-          {/* Console Toggle */}
+          {/* Screenshot Capture Button */}
           <button
-            onClick={() => setIsConsoleOpen(!isConsoleOpen)}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs transition-all duration-200 active:scale-95 ${
-              isConsoleOpen
-                ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
-                : 'text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.08]'
-            }`}
+            onClick={handleCaptureScreenshot}
+            disabled={isCapturing}
+            className="p-1.5 text-neutral-400 hover:text-white hover:bg-white/[0.08] active:scale-95 rounded-xl transition-all duration-200 disabled:opacity-40"
+            title="Take Screenshot PNG"
           >
-            <Terminal size={13} />
-            <span className="hidden sm:inline">{t.console}</span>
-            {consoleMessages.length > 0 && (
-              <span className="text-[10px] bg-blue-500/25 text-blue-400 px-1.5 py-0.2 rounded-full font-mono font-medium">
-                {consoleMessages.length}
-              </span>
-            )}
-          </button>
-
-          {/* Refresh */}
-          <button
-            onClick={handleRefresh}
-            className="p-1.5 text-neutral-400 hover:text-white hover:bg-white/[0.08] active:scale-95 rounded-xl transition-all duration-200"
-            title={t.refresh}
-          >
-            <RotateCw size={14} />
+            <Camera size={14} className={isCapturing ? 'animate-pulse text-blue-400' : ''} />
           </button>
 
           {/* External Window */}
@@ -200,6 +256,24 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
             title="Open in new window"
           >
             <ExternalLink size={14} />
+          </button>
+
+          {/* Console Toggle */}
+          <button
+            onClick={() => setIsConsoleOpen(!isConsoleOpen)}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs transition-all duration-200 active:scale-95 ${
+              isConsoleOpen
+                ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30 shadow-sm'
+                : 'text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.08]'
+            }`}
+          >
+            <Terminal size={13} />
+            <span className="hidden lg:inline">{t.console}</span>
+            {consoleMessages.length > 0 && (
+              <span className="text-[10px] bg-blue-500/25 text-blue-400 px-1.5 py-0.2 rounded-full font-mono font-medium">
+                {consoleMessages.length}
+              </span>
+            )}
           </button>
         </div>
       </div>

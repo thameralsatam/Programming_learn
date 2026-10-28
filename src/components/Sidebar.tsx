@@ -11,7 +11,8 @@ import {
   ChevronRight, 
   ChevronDown,
   FileText,
-  FileSpreadsheet
+  FileSpreadsheet,
+  PanelLeftClose
 } from 'lucide-react';
 import { FileNode, Language } from '../types';
 import { translations } from '../translations';
@@ -25,6 +26,7 @@ interface SidebarProps {
   onDuplicateFile: (fileId: string) => void;
   lang: Language;
   className?: string;
+  onToggleSidebar?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -35,6 +37,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onDuplicateFile,
   lang,
   className,
+  onToggleSidebar,
 }) => {
   const t = translations[lang];
   const [openFolders, setOpenFolders] = useState<Record<string, boolean>>({});
@@ -212,6 +215,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
           >
             <FolderPlus size={14} />
           </button>
+          {onToggleSidebar && (
+            <button
+              onClick={onToggleSidebar}
+              className="p-1.5 text-neutral-400 hover:text-white hover:bg-white/[0.08] active:scale-95 rounded-xl transition-all duration-200"
+              title={t.collapseSidebar}
+            >
+              <PanelLeftClose size={14} />
+            </button>
+          )}
         </div>
       </div>
 

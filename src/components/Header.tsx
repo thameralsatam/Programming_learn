@@ -92,8 +92,17 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="h-14 bg-[#080b12]/80 backdrop-blur-2xl border-b border-white/[0.05] px-3 sm:px-5 flex items-center justify-between select-none shrink-0 z-30 font-light transition-colors">
-      {/* Left: Navigation back to Projects Dashboard & Project Selector */}
+      {/* Left: Sidebar Toggle, Navigation back to Projects Dashboard & Project Selector */}
       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+        {/* Sidebar Fold/Unfold Toggle Button */}
+        <button
+          onClick={onToggleSidebar}
+          className="hidden md:flex p-1.5 text-neutral-400 hover:text-white bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] active:scale-95 rounded-xl transition-all duration-200 shrink-0"
+          title={`${isSidebarOpen ? t.collapseSidebar : t.expandSidebar} (Ctrl+B)`}
+        >
+          {isSidebarOpen ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
+        </button>
+
         {/* Back to Projects Dashboard */}
         <button
           onClick={onNavigateToDashboard}
