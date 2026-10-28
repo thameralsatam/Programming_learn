@@ -67,8 +67,8 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
   return (
     <div className="flex-1 flex flex-col h-full w-full bg-[#06080e] overflow-hidden font-light">
       {/* File Tabs Bar */}
-      <div className="h-10 bg-[#080b12]/80 backdrop-blur-2xl border-b border-white/[0.05] flex items-center justify-between px-3 overflow-x-auto select-none shrink-0">
-        <div className="flex items-center gap-1.5 overflow-x-auto h-full max-w-[80vw] py-1">
+      <div className="h-10 bg-[#080b12]/80 backdrop-blur-2xl border-b border-white/[0.05] flex items-center justify-between px-3 overflow-hidden select-none shrink-0">
+        <div className="flex items-center gap-1.5 flex-1 min-w-0 overflow-x-auto h-full py-1">
           {safeOpenFileIds.map((id) => {
             const f = safeFiles[id];
             if (!f) return null;
@@ -90,7 +90,7 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
                     onCloseFile(id);
                   }}
                   className="p-0.5 text-neutral-500 hover:text-white rounded-lg hover:bg-white/[0.1] active:scale-90 transition-all"
-                  aria-label="Close tab"
+                  aria-label={t.close}
                 >
                   <X size={12} />
                 </button>
@@ -115,6 +115,7 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
       <div className="flex-1 relative overflow-hidden w-full" dir="ltr">
         <Editor
           height="100%"
+          path={activeFile.id}
           language={monacoLang}
           value={activeFile.content || ''}
           theme="vs-dark"

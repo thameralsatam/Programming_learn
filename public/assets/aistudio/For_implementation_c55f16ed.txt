@@ -1,0 +1,411 @@
+فحصت الملفات كلها. هي المشاكل الأساسية:
+
+**سبب خطأ الصورة:** Tailwind الإصدار 4 يولّد ألوان بصيغة `oklab` و`color-mix`، والمكتبة `html2canvas` القديمة ما بتفهمها. وإنت كمان بتصوّر واجهة التطبيق كلها (فيها `backdrop-filter`) مش المعاينة بس. وخطأ "Tainted canvas" جاي من الإطار الخارجي (موقع حقيقي مثل Bing) لأن المتصفح بيمنع تصديره. **الحل:** نبدّل المكتبة بـ `html2canvas-pro`، ونصوّر محتوى المعاينة فقط، ونحذف ميزة "المتصفح الخارجي" لأنها معقدة، وأغلب المواقع أصلاً بترفض تنفتح داخل إطار.
+
+ترتيب التطبيق: من الأعلى للأسفل.
+
+---
+
+### 1) `package.json`
+```
+عدّل هذا الملف بالضبط:
+1. غيّر "name" إلى "studio-lab".
+2. احذف من dependencies: "@google/genai", "dotenv", "express", "idb-keyval", "motion", "emmet-monaco-es", "html2canvas", "vite" (vite يبقى فقط في devDependencies).
+3. احذف من devDependencies: "@types/express", "@types/jszip", "autoprefixer", "tsx".
+4. أضف إلى dependencies: "html2canvas-pro": "^1.5.8" و "tw-animate-css": "^1.3.0".
+5. لا تغيّر أي شي ثاني.
+```
+
+### 2) `vite.config.ts`
+```
+استبدل محتوى الملف كله بهذا بالضبط:
+
+import tailwindcss from '@tailwindcss/vite';
+import react from '@vitejs/plugin-react';
+import {defineConfig} from 'vite';
+
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+  server: {
+    hmr: process.env.DISABLE_HMR !== 'true',
+  },
+});
+
+السبب: الكود القديم كان يحقن GEMINI_API_KEY داخل ملفات المتصفح (تسريب مفتاح) والتطبيق ما بيستخدم Gemini أصلاً.
+```
+
+### 3) `tsconfig.json`
+```
+احذف هي الأسطر فقط: "experimentalDecorators", "useDefineForClassFields", "allowJs", وكتلة "paths" كاملة. لا تغيّر غيرها.
+```
+
+### 4) `index.html`
+```
+1. غيّر lang="en" إلى lang="de".
+2. غيّر <title> إلى: Studio Lab
+3. غيّر meta description و og:title و og:description إلى: Studio Lab – Web-Entwicklungsumgebung mit Live-Vorschau
+4. احذف كتلة <script> الأولى كاملة (اللي فيها function isIgnored ... إلى آخرها داخل <head>). لا تحذف السكربت الموجود داخل <body>.
+5. أبقِ روابط الخطوط (preconnect و link) كما هي.
+```
+
+### 5) `metadata.json`
+```
+غيّر "name" إلى "Studio Lab" و"description" إلى "Web-Entwicklungsumgebung mit Live-Vorschau". احذف "majorCapabilities" كاملة. أبقِ requestFramePermissions.
+```
+
+### 6) `src/main.tsx`
+```
+استبدل محتوى الملف كله بهذا:
+
+import {StrictMode} from 'react';
+import {createRoot} from 'react-dom/client';
+import App from './App.tsx';
+import { ErrorBoundary } from './components/ErrorBoundary.tsx';
+import './index.css';
+
+const NativeResizeObserver = window.ResizeObserver;
+window.ResizeObserver = class extends NativeResizeObserver {
+  constructor(callback: ResizeObserverCallback) {
+    super((entries, observer) => {
+      window.requestAnimationFrame(() => callback(entries, observer));
+    });
+  }
+};
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
+  </StrictMode>,
+);
+
+السبب: الكود القديم كان يبلع كل الأخطاء (حتى الحقيقية) ومكرر مرتين، وملف monacoWorker ما كان له استعمال لأن المحرر يحمّل نفسه تلقائياً.
+```
+
+### 7) حذف ملفات
+```
+احذف هي الملفات والمجلدات:
+- src/monacoWorker.ts
+- .env.example
+- .aistudio/ (المجلد كله)
+- bun.lock
+- package-lock.json (بينعمل من جديد عند npm install)
+
+في src/vite-env.d.ts احذف كتلة declare module '*?worker' كاملة، وأبقِ سطر /// <reference types="vite/client" /> فقط.
+```
+
+### 8) `src/index.css`
+```
+1. احذف السطر الأول كامل (@import url('https://fonts.googleapis.com/...')) لأن الخطوط محمّلة أصلاً في index.html.
+2. أضف تحت سطر @import "tailwindcss"; سطر جديد: @import "tw-animate-css";
+   (بدونه كل كلاسات animate-in و fade-in و zoom-in-95 ما بتشتغل).
+3. احذف هي الكتل كاملة: .glass-panel و .glass-card و .glass-card:hover و .smooth-transition و .font-body
+4. أبقِ .glass-modal وكل الباقي.
+```
+
+### 9) `src/types/index.ts`
+```
+1. في FileType احذف 'folder'.
+2. في ModalType احذف 'projects-list' و 'export' و 'import'.
+```
+
+### 10) `src/translations.ts`
+```
+1. في اللغات الثلاث احذف هي المفاتيح بعد ما تتأكد بالبحث إنها غير مستخدمة بأي ملف: tagline, myProjects, noProjects, files, layout, copy, editor, preview, lastEdited, projectActions, logsCount, moreActions, shortcutNewFile, shortcutQuickOpen, importConfirmTitle, importConfirmText, save.
+2. احذف المفتاح runPreview.
+3. غيّر أسماء الأجهزة بحذف الأرقام (لأن المقاسات الفعلية مختلفة عنها):
+   de: deviceResponsive 'Responsiv', deviceDesktop 'Desktop', deviceTablet 'Tablet', deviceMobile 'Mobil'
+   en: 'Responsive', 'Desktop', 'Tablet', 'Mobile'
+   ar: 'مرن', 'حاسوب', 'لوحي', 'هاتف'
+4. أضف هي المفاتيح الجديدة في اللغات الثلاث:
+   de: screenshot: 'Screenshot speichern', screenshotFailed: 'Screenshot fehlgeschlagen', openNewWindow: 'In neuem Tab öffnen'
+   en: screenshot: 'Save screenshot', screenshotFailed: 'Screenshot failed', openNewWindow: 'Open in new tab'
+   ar: screenshot: 'حفظ لقطة شاشة', screenshotFailed: 'فشل التقاط الصورة', openNewWindow: 'فتح في تبويب جديد'
+5. استبدل دالة getInitialLanguage كاملة بهذه:
+
+export function getInitialLanguage(): Language {
+  try {
+    const saved = localStorage.getItem('studio_lab_lang');
+    if (saved === 'de' || saved === 'en' || saved === 'ar') return saved;
+    const nav = (navigator.language || '').toLowerCase();
+    if (nav.startsWith('ar')) return 'ar';
+    if (nav.startsWith('en')) return 'en';
+    return 'de';
+  } catch {
+    return 'de';
+  }
+}
+```
+
+### 11) ملف جديد: `src/components/LanguageSwitcher.tsx`
+(قائمة اللغة كانت منسوخة حرفياً في Header وفي Dashboard)
+```
+أنشئ هذا الملف بالضبط:
+
+import React, { useState, useRef, useEffect } from 'react';
+import { Globe, ChevronDown } from 'lucide-react';
+import { Language } from '../types';
+
+const LANGUAGES: { code: Language; name: string }[] = [
+  { code: 'de', name: 'Deutsch' },
+  { code: 'en', name: 'English' },
+  { code: 'ar', name: 'العربية' },
+];
+
+interface LanguageSwitcherProps {
+  lang: Language;
+  onLangChange: (lang: Language) => void;
+}
+
+export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ lang, onLangChange }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const close = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, []);
+
+  const current = LANGUAGES.find((l) => l.code === lang) ?? LANGUAGES[0];
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1.5 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] hover:border-white/15 px-3 py-1.5 rounded-xl text-xs text-neutral-300 hover:text-white transition-all duration-200 font-light active:scale-95"
+      >
+        <Globe size={13} className="text-neutral-400" />
+        <span>{current.name}</span>
+        <ChevronDown size={11} className="text-neutral-500" />
+      </button>
+
+      {open && (
+        <div className="absolute ltr:right-0 rtl:left-0 mt-2 w-36 glass-modal rounded-2xl shadow-2xl py-1 z-50 animate-in fade-in zoom-in-95 duration-150 font-light text-xs">
+          {LANGUAGES.map((l) => (
+            <button
+              key={l.code}
+              onClick={() => {
+                onLangChange(l.code);
+                setOpen(false);
+              }}
+              className={`w-full px-3 py-2 text-start flex items-center justify-between hover:bg-white/[0.06] transition-all ${
+                lang === l.code ? 'text-blue-400 font-normal' : 'text-neutral-300'
+              }`}
+            >
+              <span>{l.name}</span>
+              <span className="text-[10px] font-mono text-neutral-500">{l.code.toUpperCase()}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+```
+
+### 12) `src/components/Header.tsx`
+```
+1. أضف import: import { LanguageSwitcher } from './LanguageSwitcher';
+2. احذف من الـ imports: Globe و SlidersHorizontal لا (تبقى)؛ احذف Globe فقط.
+3. احذف langRef و isLangDropdownOpen و getLangName وكتلة if الخاصة بـ langRef داخل handleClickOutside.
+4. استبدل كتلة "Single Language Dropdown Button" كاملة (من <div className="relative" ref={langRef}> إلى إغلاقها) بسطر واحد:
+   <LanguageSwitcher lang={lang} onLangChange={onLangChange} />
+5. احذف زر "Sidebar Toggle for Desktop" المكرر في الجهة اليمنى (الثاني). أبقِ الزر الأول في الجهة اليسرى.
+6. في نوع onOpenModal احذف 'projects-list'.
+```
+
+### 13) `src/components/ProjectsDashboard.tsx`
+```
+1. أضف import: import { LanguageSwitcher } from './LanguageSwitcher';
+2. احذف من imports أيقونتي Globe و ChevronDown.
+3. احذف langRef و isLangDropdownOpen و getLangName.
+4. داخل handleClickOutside احذف الشرط الأول (اللي فيه langRef) وأبقِ فقط الجزء الخاص بـ card-menu-container.
+5. استبدل كتلة "Single Language Dropdown Button" كاملة بـ:
+   <LanguageSwitcher lang={lang} onLangChange={onLangChange} />
+```
+
+### 14) `src/components/Sidebar.tsx`
+```
+1. احذف من props و destructuring: onToggleSidebar. واحذف PanelLeftClose من imports.
+2. استبدل أيقونة css من FileSpreadsheet إلى Palette، وأيقونة json من FileText إلى Braces (أضفهما في imports من lucide-react واحذف FileSpreadsheet).
+```
+
+### 15) `src/components/Modals.tsx`
+```
+1. احذف Keyboard من imports.
+2. استبدل useEffect الخاص بـ inputValue بـ:
+   useEffect(() => { setInputValue(modalState.initialValue ?? ''); }, [modalState]);
+3. احذف فرع modalState.type === 'import' كاملاً (العنوان + الكتلة)، ولا تغيّر باقي الفروع.
+4. في كتلة shortcuts: احذف صف Ctrl + R (غير مبرمج أصلاً)، واستبدل الصفوف الثلاثة المتبقية بـ map على هذه المصفوفة:
+   const shortcuts = [
+     [t.shortcutSave, 'Ctrl + S'],
+     [t.shortcutFormat, 'Shift + Alt + F'],
+     [t.shortcutToggleSidebar, 'Ctrl + B'],
+   ];
+   (نفس الكلاسات الحالية للصف والـ kbd).
+```
+
+### 16) `src/components/EditorPane.tsx`
+```
+1. في مكوّن Editor أضف الخاصية: path={activeFile.id}  (لحفظ سجل التراجع لكل ملف وحده).
+2. في شريط التبويبات: غيّر الـ div الخارجي من overflow-x-auto إلى overflow-hidden، وغيّر الـ div الداخلي إلى: className="flex items-center gap-1.5 flex-1 min-w-0 overflow-x-auto h-full py-1" (احذف max-w-[80vw]).
+3. غيّر aria-label="Close tab" إلى aria-label={t.close}.
+```
+
+### 17) `src/utils/fileHelpers.ts`
+```
+1. اختيار ملف الصفحة: استبدل الـ find الحالي بـ:
+   const htmlFile =
+     Object.values(files).find((f) => f?.type === 'file' && f.name?.toLowerCase() === 'index.html') ??
+     Object.values(files).find((f) => f?.type === 'file' && f.name?.toLowerCase().endsWith('.html'));
+   (القديم كان يختار أي ملف html أول قائمة حتى لو index.html موجود).
+
+2. أخطاء الاستبدال: كل مكان فيه processedHtml.replace(regex, 'نص يحتوي كود المستخدم') لازم ينتقل لدالة، لأن رموز مثل $& و $' داخل كود المستخدم بتنفسد. مثال:
+   processedHtml.replace(linkRegex, () => `<style>/* ${cf.name} */\n${cf.content || ''}</style>`)
+   نفس الشي لكل replace فيه محتوى ملف أو consoleScript أو styleTag أو scriptTag (6 أماكن).
+
+3. اجمع الصفحتين الفارغتين المتشابهتين بدالة واحدة:
+   const emptyPage = (message: string) => `<!DOCTYPE html><html><head><style>body{margin:0;padding:2rem;background:#090b10;color:#8b94a5;font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:80vh;text-align:center}</style></head><body><p>${message}</p></body></html>`;
+   واستعملها في الحالتين (بدون ملفات: 'Keine Dateien vorhanden.' وبدون html: 'Erstelle oder wähle eine <strong>index.html</strong> Datei, um die Live-Vorschau anzuzeigen.').
+
+4. استبدل محتوى consoleScript كله (داخل وسم script) بهذا:
+(function () {
+  function fmt(a) {
+    if (a instanceof Error) return a.message;
+    if (typeof a === 'object' && a !== null) { try { return JSON.stringify(a); } catch (e) { return String(a); } }
+    return String(a);
+  }
+  function send(type, text) {
+    try { window.parent.postMessage({ source: 'studio-lab-preview', type: type, text: text, timestamp: Date.now() }, '*'); } catch (e) {}
+  }
+  ['log', 'info', 'warn', 'error'].forEach(function (type) {
+    var orig = console[type];
+    console[type] = function () {
+      orig.apply(console, arguments);
+      send(type, Array.prototype.map.call(arguments, fmt).join(' '));
+    };
+  });
+  window.addEventListener('error', function (e) {
+    send('error', (e.message || 'Error') + (e.lineno ? ' (Line: ' + e.lineno + ')' : ''));
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    send('error', 'Unhandled: ' + fmt(e.reason));
+  });
+})();
+```
+
+### 18) `src/components/PreviewPane.tsx` (ملف الصورة)
+```
+1. غيّر الاستيراد: import html2canvas from 'html2canvas-pro';
+2. احذف من أيقونات lucide: ChevronLeft, ChevronRight, Lock, Globe, Home.
+3. احذف كل هي الـ states: inputUrl, activeExternalUrl, historyStack, historyIndex، وكل هي الدوال: handleNavigateUrl, handleGoBack, handleGoForward, handleResetToProject.
+4. احذف previewContainerRef واستبدله بـ: const iframeRef = useRef<HTMLIFrameElement>(null);
+   واحذف ref={previewContainerRef} من كل أماكنه (4 أماكن).
+5. أضف state: const [captureFailed, setCaptureFailed] = useState(false);
+6. استبدل openInNewTab بـ:
+   const openInNewTab = () => {
+     const url = URL.createObjectURL(new Blob([bundledHtml], { type: 'text/html' }));
+     window.open(url, '_blank');
+     setTimeout(() => URL.revokeObjectURL(url), 60000);
+   };
+7. استبدل handleCaptureScreenshot كاملة بـ:
+   const handleCaptureScreenshot = async () => {
+     const doc = iframeRef.current?.contentDocument;
+     if (!doc?.body) return;
+     try {
+       setIsCapturing(true);
+       const canvas = await html2canvas(doc.body, {
+         useCORS: true,
+         scale: 2,
+         backgroundColor: getComputedStyle(doc.body).backgroundColor,
+         windowWidth: doc.documentElement.scrollWidth,
+         windowHeight: doc.documentElement.scrollHeight,
+         onclone: (clonedDoc) => {
+           clonedDoc.querySelectorAll<HTMLElement>('*').forEach((el) => {
+             el.style.backdropFilter = 'none';
+             el.style.setProperty('-webkit-backdrop-filter', 'none');
+           });
+         },
+       });
+       const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+       if (blob) saveAs(blob, `studio_preview_${device}_${Date.now()}.png`);
+     } catch (err) {
+       console.error('Screenshot failed', err);
+       setCaptureFailed(true);
+       setTimeout(() => setCaptureFailed(false), 3000);
+     } finally {
+       setIsCapturing(false);
+     }
+   };
+8. استبدل iframeElement كله بإطار واحد فقط (احذف فرع الموقع الخارجي والطبقة العائمة):
+   const iframeElement = (
+     <iframe
+       ref={iframeRef}
+       key={iframeKey}
+       srcDoc={bundledHtml}
+       title="Studio Lab Preview"
+       sandbox="allow-scripts allow-modals allow-forms allow-same-origin"
+       className="w-full h-full border-none bg-[#090b10]"
+     />
+   );
+9. في شريط الأدوات: احذف أزرار الرجوع والأمام ونموذج شريط العنوان (<form onSubmit={handleNavigateUrl}> كاملاً). أبقِ زر التحديث (RotateCw) فقط في الجهة اليسرى، وأبقِ الجهة اليمنى كما هي.
+10. زر الصورة: title={captureFailed ? t.screenshotFailed : t.screenshot}، وكلاس الأيقونة: isCapturing ? 'animate-pulse text-blue-400' : captureFailed ? 'text-rose-400' : ''
+11. زر النافذة الخارجية: title={t.openNewWindow}
+12. غيّر py-0.2 إلى py-0.5
+```
+
+### 19) `src/App.tsx` (الأكبر)
+```
+1. currentProject: استبدل useMemo الحالي بـ:
+   const currentProject = useMemo(() => projects.find((p) => p.id === currentProjectId) ?? projects[0], [projects, currentProjectId]);
+   (sanitizeProject تبقى فقط عند التحميل من localStorage وعند الاستيراد، مش مع كل رسم للصفحة).
+
+2. الحفظ: احذف دالة persistProjects واحذف كل استدعاءاتها (داخل updateCurrentProject، handleDuplicateProject، handleModalConfirm، handleFileImport) واحذف setIsSaved(false) من updateCurrentProject. أضف خارج المكوّن:
+   function saveProjects(list: Project[]): boolean {
+     try { localStorage.setItem(STORAGE_PROJECTS_KEY, JSON.stringify(list)); return true; }
+     catch (e) { console.error('Failed to persist projects', e); return false; }
+   }
+   وداخل المكوّن:
+   useEffect(() => {
+     setIsSaved(false);
+     const id = window.setTimeout(() => setIsSaved(saveProjects(projects)), 600);
+     return () => window.clearTimeout(id);
+   }, [projects]);
+   useEffect(() => {
+     try { localStorage.setItem(STORAGE_CURRENT_PROJECT_KEY, currentProjectId); } catch {}
+   }, [currentProjectId]);
+   وفي اختصار Ctrl+S: استبدل persistProjects(projects) بـ setIsSaved(saveProjects(projects)).
+   السبب: الكود القديم كان يكتب في localStorage مع كل حرف ويستدعي ذلك داخل setState (بينعمل مرتين).
+
+3. حذف عنصر: في delete-node احذف الأبناء كمان إذا كان مجلد. استبدل جسم updater بـ:
+   const toDelete = new Set<string>([targetId]);
+   Object.values(p.files).forEach((f) => { if (f.parentId && toDelete.has(f.parentId)) toDelete.add(f.id); });
+   const nextFiles = { ...p.files };
+   toDelete.forEach((id) => delete nextFiles[id]);
+   const nextOpen = p.openFileIds.filter((id) => !toDelete.has(id));
+   const nextActive = toDelete.has(p.activeFileId ?? '') ? (nextOpen[nextOpen.length - 1] ?? null) : p.activeFileId;
+   return { ...p, files: nextFiles, openFileIds: nextOpen, activeFileId: nextActive };
+
+4. التصدير: احذف handleExportZip القديمة، وخلي handleExportProjectDirect هي الوحيدة. وفي Header مرّر: onExportZip={() => handleExportProjectDirect(currentProject)}
+
+5. الاستيراد: غيّر accept="​.zip,.json" إلى accept=".zip". داخل حلقة الملفات تجاهل أي مدخل مساره يبدأ بـ __MACOSX/ أو لا ينتهي بأحد: html, htm, css, js, mjs, json, md, txt, svg (تجنب قراءة الصور كنص).
+
+6. handleOpenModal: غيّر type: any إلى type: ModalType (أضف ModalType للاستيراد من types).
+
+7. نسخ المشروع: غيّر لاحقة الاسم إلى: lang === 'de' ? 'Kopie' : lang === 'ar' ? 'نسخة' : 'Copy'
+
+8. التكرار في العرض: عرّف مرة واحدة قبل return الرئيسي:
+   const editorPane = (<EditorPane files={currentProject.files} activeFileId={currentProject.activeFileId} openFileIds={currentProject.openFileIds} onSelectFile={handleSelectFile} onCloseFile={handleCloseFile} onContentChange={handleContentChange} lang={lang} />);
+   const previewPane = (<PreviewPane bundledHtml={bundledHtml} consoleMessages={consoleMessages} onClearConsole={() => setConsoleMessages([])} lang={lang} />);
+   واستبدل كل نسخ EditorPane و PreviewPane (في الموبايل وفي الأربعة تخطيطات) بـ {editorPane} و {previewPane}.
+```
+
+---
+
+**ملاحظة أمان وحدة:** الإطار فيه `allow-same-origin` (ضروري عشان نقدر نصوّر داخله). يعني كود المستخدم نظرياً بيقدر يقرأ localStorage تبع التطبيق. لأنه مشروع تعلّم شخصي، مقبول، بس لا تشاركه كأداة عامة بهالشكل.
+
+بعد ما يطبّق جيمناي الكل، شغّل `npm install` ثم جرّب الصورة. إذا ظهر خطأ جديد، ابعتلي نصه.

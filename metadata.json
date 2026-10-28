@@ -1,11 +1,8 @@
 {
-  "name": "مختبر تعلم HTML",
-  "description": "بيئة تفاعلية لتعلم لغة HTML مع معاينة مباشرة للكود.",
+  "name": "Studio Lab",
+  "description": "Studio Lab – Web-Entwicklungsumgebung mit Live-Vorschau",
   "requestFramePermissions": [
     "clipboard-read",
     "clipboard-write"
-  ],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
   ]
 }

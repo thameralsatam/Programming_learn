@@ -15,11 +15,11 @@ import {
   Trash2,
   Edit3,
   SlidersHorizontal,
-  ArrowLeft,
-  Globe
+  ArrowLeft
 } from 'lucide-react';
 import { Project, LayoutMode, Language } from '../types';
 import { translations } from '../translations';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
 interface HeaderProps {
   currentProject: Project;
@@ -29,7 +29,7 @@ interface HeaderProps {
   lang: Language;
   onLangChange: (lang: Language) => void;
   onSelectProject: (projectId: string) => void;
-  onOpenModal: (type: 'new-project' | 'rename-project' | 'delete-project' | 'shortcuts' | 'projects-list') => void;
+  onOpenModal: (type: 'new-project' | 'rename-project' | 'delete-project' | 'shortcuts') => void;
   onExportZip: () => void;
   onImportClick: () => void;
   isSidebarOpen: boolean;
@@ -57,11 +57,9 @@ export const Header: React.FC<HeaderProps> = ({
   const t = translations[lang] || translations.de;
   const [isProjectsDropdownOpen, setIsProjectsDropdownOpen] = useState(false);
   const [isOptionsMenuOpen, setIsOptionsMenuOpen] = useState(false);
-  const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const optionsRef = useRef<HTMLDivElement>(null);
-  const langRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -71,27 +69,13 @@ export const Header: React.FC<HeaderProps> = ({
       if (optionsRef.current && !optionsRef.current.contains(e.target as Node)) {
         setIsOptionsMenuOpen(false);
       }
-      if (langRef.current && !langRef.current.contains(e.target as Node)) {
-        setIsLangDropdownOpen(false);
-      }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const getLangName = (l: Language) => {
-    switch (l) {
-      case 'ar':
-        return 'العربية';
-      case 'de':
-        return 'Deutsch';
-      default:
-        return 'English';
-    }
-  };
-
   return (
-    <header className="h-14 bg-[#080b12]/80 backdrop-blur-2xl border-b border-white/[0.05] px-3 sm:px-5 flex items-center justify-between select-none shrink-0 z-30 font-light transition-colors">
+    <header className="h-14 bg-[#080b12]/85 backdrop-blur-2xl border-b border-white/[0.05] px-3 sm:px-5 flex items-center justify-between select-none shrink-0 z-30 font-light transition-colors">
       {/* Left: Sidebar Toggle, Navigation back to Projects Dashboard & Project Selector */}
       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         {/* Sidebar Fold/Unfold Toggle Button */}
@@ -158,69 +142,9 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Right: Single Language Dropdown & Options Menu Button */}
+      {/* Right: Language Switcher & Options Menu Button */}
       <div className="flex items-center gap-2 shrink-0">
-        {/* Single Language Dropdown Button */}
-        <div className="relative" ref={langRef}>
-          <button
-            onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
-            className="flex items-center gap-1.5 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] hover:border-white/15 px-3 py-1.5 rounded-xl text-xs text-neutral-300 hover:text-white transition-all duration-200 font-light active:scale-95"
-          >
-            <Globe size={13} className="text-neutral-400" />
-            <span>{getLangName(lang)}</span>
-            <ChevronDown size={11} className="text-neutral-500" />
-          </button>
-
-          {isLangDropdownOpen && (
-            <div className="absolute ltr:right-0 rtl:left-0 mt-2 w-36 glass-modal rounded-2xl shadow-2xl py-1 z-50 animate-in fade-in zoom-in-95 duration-150 font-light text-xs">
-              <button
-                onClick={() => {
-                  onLangChange('de');
-                  setIsLangDropdownOpen(false);
-                }}
-                className={`w-full px-3 py-2 text-start flex items-center justify-between hover:bg-white/[0.06] transition-all ${
-                  lang === 'de' ? 'text-blue-400 font-normal' : 'text-neutral-300'
-                }`}
-              >
-                <span>Deutsch</span>
-                <span className="text-[10px] font-mono text-neutral-500">DE</span>
-              </button>
-              <button
-                onClick={() => {
-                  onLangChange('en');
-                  setIsLangDropdownOpen(false);
-                }}
-                className={`w-full px-3 py-2 text-start flex items-center justify-between hover:bg-white/[0.06] transition-all ${
-                  lang === 'en' ? 'text-blue-400 font-normal' : 'text-neutral-300'
-                }`}
-              >
-                <span>English</span>
-                <span className="text-[10px] font-mono text-neutral-500">EN</span>
-              </button>
-              <button
-                onClick={() => {
-                  onLangChange('ar');
-                  setIsLangDropdownOpen(false);
-                }}
-                className={`w-full px-3 py-2 text-start flex items-center justify-between hover:bg-white/[0.06] transition-all ${
-                  lang === 'ar' ? 'text-blue-400 font-normal' : 'text-neutral-300'
-                }`}
-              >
-                <span>العربية</span>
-                <span className="text-[10px] font-mono text-neutral-500">AR</span>
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Sidebar Toggle for Desktop */}
-        <button
-          onClick={onToggleSidebar}
-          className="hidden md:flex p-2 text-neutral-400 hover:text-white hover:bg-white/[0.06] active:scale-95 rounded-xl transition-all duration-200"
-          title={isSidebarOpen ? t.collapseSidebar : t.expandSidebar}
-        >
-          {isSidebarOpen ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
-        </button>
+        <LanguageSwitcher lang={lang} onLangChange={onLangChange} />
 
         {/* Unified Options Menu Button */}
         <div className="relative" ref={optionsRef}>

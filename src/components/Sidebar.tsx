@@ -11,8 +11,8 @@ import {
   ChevronRight, 
   ChevronDown,
   FileText,
-  FileSpreadsheet,
-  PanelLeftClose
+  Palette,
+  Braces
 } from 'lucide-react';
 import { FileNode, Language } from '../types';
 import { translations } from '../translations';
@@ -26,7 +26,6 @@ interface SidebarProps {
   onDuplicateFile: (fileId: string) => void;
   lang: Language;
   className?: string;
-  onToggleSidebar?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -37,7 +36,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onDuplicateFile,
   lang,
   className,
-  onToggleSidebar,
 }) => {
   const t = translations[lang];
   const [openFolders, setOpenFolders] = useState<Record<string, boolean>>({});
@@ -55,11 +53,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
       case 'html':
         return <FileCode size={15} className="text-orange-400 shrink-0" />;
       case 'css':
-        return <FileSpreadsheet size={15} className="text-sky-400 shrink-0" />;
+        return <Palette size={15} className="text-sky-400 shrink-0" />;
       case 'js':
         return <FileCode size={15} className="text-amber-400 shrink-0" />;
       case 'json':
-        return <FileText size={15} className="text-emerald-400 shrink-0" />;
+        return <Braces size={15} className="text-emerald-400 shrink-0" />;
       default:
         return <FileText size={15} className="text-neutral-400 shrink-0" />;
     }

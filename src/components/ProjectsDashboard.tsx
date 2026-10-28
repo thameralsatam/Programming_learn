@@ -12,12 +12,11 @@ import {
   Edit3,
   Calendar,
   Layers,
-  ArrowRight,
-  Globe,
-  ChevronDown
+  ArrowRight
 } from 'lucide-react';
 import { Project, Language, FileNode } from '../types';
 import { translations } from '../translations';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
 interface ProjectsDashboardProps {
   projects: Project[];
@@ -43,14 +42,9 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
   const t = translations[lang] || translations.de;
   const [searchQuery, setSearchQuery] = useState('');
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
-  const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
-  const langRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (langRef.current && !langRef.current.contains(e.target as Node)) {
-        setIsLangDropdownOpen(false);
-      }
       const target = e.target as HTMLElement;
       if (!target.closest('.card-menu-container')) {
         setActiveMenuId(null);
@@ -59,17 +53,6 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const getLangName = (l: Language) => {
-    switch (l) {
-      case 'ar':
-        return 'العربية';
-      case 'de':
-        return 'Deutsch';
-      default:
-        return 'English';
-    }
-  };
 
   const filteredProjects = useMemo(() => {
     if (!searchQuery.trim()) return projects;
@@ -112,58 +95,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Single Language Dropdown Button */}
-          <div className="relative" ref={langRef}>
-            <button
-              onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
-              className="flex items-center gap-1.5 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] hover:border-white/15 px-3 py-1.5 rounded-xl text-xs text-neutral-300 hover:text-white transition-all duration-200 font-light active:scale-95"
-            >
-              <Globe size={13} className="text-neutral-400" />
-              <span>{getLangName(lang)}</span>
-              <ChevronDown size={11} className="text-neutral-500" />
-            </button>
-
-            {isLangDropdownOpen && (
-              <div className="absolute ltr:right-0 rtl:left-0 mt-2 w-36 glass-modal rounded-2xl shadow-2xl py-1 z-50 animate-in fade-in zoom-in-95 duration-150 font-light text-xs">
-                <button
-                  onClick={() => {
-                    onLangChange('de');
-                    setIsLangDropdownOpen(false);
-                  }}
-                  className={`w-full px-3 py-2 text-start flex items-center justify-between hover:bg-white/[0.06] transition-all ${
-                    lang === 'de' ? 'text-blue-400 font-normal' : 'text-neutral-300'
-                  }`}
-                >
-                  <span>Deutsch</span>
-                  <span className="text-[10px] font-mono text-neutral-500">DE</span>
-                </button>
-                <button
-                  onClick={() => {
-                    onLangChange('en');
-                    setIsLangDropdownOpen(false);
-                  }}
-                  className={`w-full px-3 py-2 text-start flex items-center justify-between hover:bg-white/[0.06] transition-all ${
-                    lang === 'en' ? 'text-blue-400 font-normal' : 'text-neutral-300'
-                  }`}
-                >
-                  <span>English</span>
-                  <span className="text-[10px] font-mono text-neutral-500">EN</span>
-                </button>
-                <button
-                  onClick={() => {
-                    onLangChange('ar');
-                    setIsLangDropdownOpen(false);
-                  }}
-                  className={`w-full px-3 py-2 text-start flex items-center justify-between hover:bg-white/[0.06] transition-all ${
-                    lang === 'ar' ? 'text-blue-400 font-normal' : 'text-neutral-300'
-                  }`}
-                >
-                  <span>العربية</span>
-                  <span className="text-[10px] font-mono text-neutral-500">AR</span>
-                </button>
-              </div>
-            )}
-          </div>
+          <LanguageSwitcher lang={lang} onLangChange={onLangChange} />
         </div>
       </header>
 

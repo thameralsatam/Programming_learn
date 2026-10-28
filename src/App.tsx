@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { Code2, Eye, Folder } from 'lucide-react';
-import { Project, FileNode, LayoutMode, ModalState, ConsoleMessage, Language, AppView } from './types';
+import { Project, FileNode, LayoutMode, ModalState, ConsoleMessage, Language, AppView, ModalType } from './types';
 import { translations, getInitialLanguage, saveLanguage } from './translations';
 import { createStarterProject } from './templates/starterProject';
 import { buildPreviewHtml } from './utils/fileHelpers';
@@ -73,6 +73,16 @@ function sanitizeProject(p: any, lang: Language): Project {
     activeFileId,
     openFileIds,
   };
+}
+
+function saveProjects(list: Project[]): boolean {
+  try {
+    localStorage.setItem(STORAGE_PROJECTS_KEY, JSON.stringify(list));
+    return true;
+  } catch (e) {
+    console.error('Failed to persist projects', e);
+    return false;
+  }
 }
 
 export default function App() {
@@ -147,20 +157,21 @@ export default function App() {
 
   // Current active project
   const currentProject = useMemo(() => {
-    const raw = projects.find((p) => p.id === currentProjectId) || projects[0];
-    return sanitizeProject(raw, lang);
-  }, [projects, currentProjectId, lang]);
+    return projects.find((p) => p.id === currentProjectId) ?? projects[0];
+  }, [projects, currentProjectId]);
 
-  // Save projects to localStorage
-  const persistProjects = (updatedProjects: Project[]) => {
+  // Save projects with debounced effect
+  useEffect(() => {
+    setIsSaved(false);
+    const id = window.setTimeout(() => setIsSaved(saveProjects(projects)), 600);
+    return () => window.clearTimeout(id);
+  }, [projects]);
+
+  useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_PROJECTS_KEY, JSON.stringify(updatedProjects));
       localStorage.setItem(STORAGE_CURRENT_PROJECT_KEY, currentProjectId);
-      setIsSaved(true);
-    } catch (e) {
-      console.error('Failed to persist projects', e);
-    }
-  };
+    } catch {}
+  }, [currentProjectId]);
 
   // Change Layout Mode
   const handleLayoutChange = (newLayout: LayoutMode) => {
@@ -202,7 +213,7 @@ export default function App() {
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
-        persistProjects(projects);
+        setIsSaved(saveProjects(projects));
       } else if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
         e.preventDefault();
         setIsSidebarOpen((prev) => !prev);
@@ -210,21 +221,18 @@ export default function App() {
     }
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [projects, currentProjectId]);
+  }, [projects]);
 
   // Update Project helper
   const updateCurrentProject = (updater: (p: Project) => Project) => {
     setProjects((prevProjects) => {
-      const updated = prevProjects.map((p) => {
+      return prevProjects.map((p) => {
         if (p.id === currentProject.id) {
           return updater({ ...p, updatedAt: Date.now() });
         }
         return p;
       });
-      persistProjects(updated);
-      return updated;
     });
-    setIsSaved(false);
   };
 
   // Select File
@@ -309,16 +317,16 @@ export default function App() {
     const orig = projects.find((p) => p.id === projectId);
     if (!orig) return;
     const newId = `project_${Date.now()}`;
+    const copySuffix = lang === 'de' ? 'Kopie' : lang === 'ar' ? 'نسخة' : 'Copy';
     const newProj: Project = {
       ...orig,
       id: newId,
-      name: `${orig.name} (${lang === 'de' ? 'Kopie' : 'Copy'})`,
+      name: `${orig.name} (${copySuffix})`,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
     const updated = [newProj, ...projects];
     setProjects(updated);
-    persistProjects(updated);
   };
 
   const handleExportProjectDirect = async (project: Project) => {
@@ -337,7 +345,7 @@ export default function App() {
   };
 
   // Modal Handlers
-  const handleOpenModal = (type: any, targetId?: string) => {
+  const handleOpenModal = (type: ModalType, targetId?: string) => {
     let initialValue = '';
     if (type === 'rename-node' && targetId) {
       initialValue = currentProject.files[targetId]?.name || '';
@@ -360,14 +368,11 @@ export default function App() {
       const updated = [newProj, ...projects];
       setProjects(updated);
       setCurrentProjectId(newProj.id);
-      persistProjects(updated);
       setViewMode('workspace');
     } else if (type === 'rename-project' && val) {
       const targetProjId = targetId || currentProjectId;
       setProjects((prev) => {
-        const updated = prev.map((p) => (p.id === targetProjId ? { ...p, name: val, updatedAt: Date.now() } : p));
-        persistProjects(updated);
-        return updated;
+        return prev.map((p) => (p.id === targetProjId ? { ...p, name: val, updatedAt: Date.now() } : p));
       });
     } else if (type === 'delete-project') {
       const targetProjId = targetId || currentProjectId;
@@ -375,12 +380,10 @@ export default function App() {
         const fresh = createStarterProject(lang);
         setProjects([fresh]);
         setCurrentProjectId(fresh.id);
-        persistProjects([fresh]);
       } else {
         const remaining = projects.filter((p) => p.id !== targetProjId);
         setProjects(remaining);
         setCurrentProjectId(remaining[0].id);
-        persistProjects(remaining);
       }
     } else if (type === 'new-file' && val) {
       const newId = `file_${Date.now()}`;
@@ -431,13 +434,14 @@ export default function App() {
       });
     } else if (type === 'delete-node' && targetId) {
       updateCurrentProject((p) => {
+        const toDelete = new Set<string>([targetId]);
+        Object.values(p.files).forEach((f) => {
+          if (f.parentId && toDelete.has(f.parentId)) toDelete.add(f.id);
+        });
         const nextFiles = { ...p.files };
-        delete nextFiles[targetId];
-        const nextOpen = p.openFileIds.filter((id) => id !== targetId);
-        let nextActive = p.activeFileId;
-        if (p.activeFileId === targetId) {
-          nextActive = nextOpen.length > 0 ? nextOpen[nextOpen.length - 1] : null;
-        }
+        toDelete.forEach((id) => delete nextFiles[id]);
+        const nextOpen = p.openFileIds.filter((id) => !toDelete.has(id));
+        const nextActive = toDelete.has(p.activeFileId ?? '') ? (nextOpen[nextOpen.length - 1] ?? null) : p.activeFileId;
         return {
           ...p,
           files: nextFiles,
@@ -448,22 +452,6 @@ export default function App() {
     }
 
     handleCloseModal();
-  };
-
-  // Export as ZIP
-  const handleExportZip = async () => {
-    try {
-      const zip = new JSZip();
-      (Object.values(currentProject.files) as FileNode[]).forEach((node) => {
-        if (node.type === 'file') {
-          zip.file(node.name, node.content || '');
-        }
-      });
-      const blob = await zip.generateAsync({ type: 'blob' });
-      saveAs(blob, `${currentProject.name.replace(/\s+/g, '_')}.zip`);
-    } catch (err) {
-      console.error('Failed to export zip', err);
-    }
   };
 
   // Import trigger
@@ -483,17 +471,21 @@ export default function App() {
         const openIds: string[] = [];
 
         for (const [relativePath, zipEntry] of Object.entries(loaded.files)) {
-          if (!zipEntry.dir) {
-            const content = await zipEntry.async('string');
-            const fileId = `imported_${Date.now()}_${Math.random()}`;
-            importedFiles[fileId] = {
-              id: fileId,
-              name: relativePath,
-              type: 'file',
-              content,
-              parentId: null,
-            };
-            openIds.push(fileId);
+          if (!zipEntry.dir && !relativePath.startsWith('__MACOSX/')) {
+            const ext = relativePath.split('.').pop()?.toLowerCase();
+            const allowedExts = ['html', 'htm', 'css', 'js', 'mjs', 'json', 'md', 'txt', 'svg'];
+            if (ext && allowedExts.includes(ext)) {
+              const content = await zipEntry.async('string');
+              const fileId = `imported_${Date.now()}_${Math.random()}`;
+              importedFiles[fileId] = {
+                id: fileId,
+                name: relativePath,
+                type: 'file',
+                content,
+                parentId: null,
+              };
+              openIds.push(fileId);
+            }
           }
         }
 
@@ -510,7 +502,6 @@ export default function App() {
           const updated = [newProj, ...projects];
           setProjects(updated);
           setCurrentProjectId(newProj.id);
-          persistProjects(updated);
         }
       }
     } catch (err) {
@@ -528,6 +519,28 @@ export default function App() {
   }, [currentProject.files]);
 
   const t = translations[lang];
+
+  // Memoized editor and preview panes
+  const editorPane = (
+    <EditorPane
+      files={currentProject.files}
+      activeFileId={currentProject.activeFileId}
+      openFileIds={currentProject.openFileIds}
+      onSelectFile={handleSelectFile}
+      onCloseFile={handleCloseFile}
+      onContentChange={handleContentChange}
+      lang={lang}
+    />
+  );
+
+  const previewPane = (
+    <PreviewPane
+      bundledHtml={bundledHtml}
+      consoleMessages={consoleMessages}
+      onClearConsole={() => setConsoleMessages([])}
+      lang={lang}
+    />
+  );
 
   if (viewMode === 'dashboard') {
     return (
@@ -561,7 +574,7 @@ export default function App() {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".zip,.json"
+        accept=".zip"
         className="hidden"
         onChange={handleFileImport}
       />
@@ -576,7 +589,7 @@ export default function App() {
         onLangChange={handleLangChange}
         onSelectProject={(id) => setCurrentProjectId(id)}
         onOpenModal={handleOpenModal}
-        onExportZip={handleExportZip}
+        onExportZip={() => handleExportProjectDirect(currentProject)}
         onImportClick={handleImportClick}
         isSidebarOpen={isSidebarOpen}
         onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -586,30 +599,17 @@ export default function App() {
 
       {/* Main Workspace Canvas */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Mobile Viewports (< md) - Clean, Lag-Free Single View Navigation */}
+        {/* Mobile Viewports (< md) */}
         <div className="flex md:hidden flex-1 flex-col h-full overflow-hidden">
           {mobileTab === 'editor' && (
             <div className="flex-1 h-full overflow-hidden animate-in fade-in duration-150">
-              <EditorPane
-                files={currentProject.files}
-                activeFileId={currentProject.activeFileId}
-                openFileIds={currentProject.openFileIds}
-                onSelectFile={handleSelectFile}
-                onCloseFile={handleCloseFile}
-                onContentChange={handleContentChange}
-                lang={lang}
-              />
+              {editorPane}
             </div>
           )}
 
           {mobileTab === 'preview' && (
             <div className="flex-1 h-full overflow-hidden animate-in fade-in duration-150">
-              <PreviewPane
-                bundledHtml={bundledHtml}
-                consoleMessages={consoleMessages}
-                onClearConsole={() => setConsoleMessages([])}
-                lang={lang}
-              />
+              {previewPane}
             </div>
           )}
 
@@ -677,7 +677,6 @@ export default function App() {
               onDuplicateFile={handleDuplicateFile}
               lang={lang}
               className="w-60"
-              onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
             />
           )}
 
@@ -686,23 +685,10 @@ export default function App() {
             {layout === 'split-horizontal' && (
               <div className="flex-1 flex flex-row overflow-hidden animate-in fade-in duration-200">
                 <div className="flex-1 h-full overflow-hidden">
-                  <EditorPane
-                    files={currentProject.files}
-                    activeFileId={currentProject.activeFileId}
-                    openFileIds={currentProject.openFileIds}
-                    onSelectFile={handleSelectFile}
-                    onCloseFile={handleCloseFile}
-                    onContentChange={handleContentChange}
-                    lang={lang}
-                  />
+                  {editorPane}
                 </div>
                 <div className="flex-1 h-full overflow-hidden">
-                  <PreviewPane
-                    bundledHtml={bundledHtml}
-                    consoleMessages={consoleMessages}
-                    onClearConsole={() => setConsoleMessages([])}
-                    lang={lang}
-                  />
+                  {previewPane}
                 </div>
               </div>
             )}
@@ -710,49 +696,23 @@ export default function App() {
             {layout === 'split-vertical' && (
               <div className="flex-1 flex flex-col overflow-hidden animate-in fade-in duration-200">
                 <div className="flex-1 h-1/2 overflow-hidden">
-                  <EditorPane
-                    files={currentProject.files}
-                    activeFileId={currentProject.activeFileId}
-                    openFileIds={currentProject.openFileIds}
-                    onSelectFile={handleSelectFile}
-                    onCloseFile={handleCloseFile}
-                    onContentChange={handleContentChange}
-                    lang={lang}
-                  />
+                  {editorPane}
                 </div>
                 <div className="flex-1 h-1/2 overflow-hidden border-t border-white/[0.06]">
-                  <PreviewPane
-                    bundledHtml={bundledHtml}
-                    consoleMessages={consoleMessages}
-                    onClearConsole={() => setConsoleMessages([])}
-                    lang={lang}
-                  />
+                  {previewPane}
                 </div>
               </div>
             )}
 
             {layout === 'editor-only' && (
               <div className="flex-1 h-full overflow-hidden animate-in fade-in duration-200">
-                <EditorPane
-                  files={currentProject.files}
-                  activeFileId={currentProject.activeFileId}
-                  openFileIds={currentProject.openFileIds}
-                  onSelectFile={handleSelectFile}
-                  onCloseFile={handleCloseFile}
-                  onContentChange={handleContentChange}
-                  lang={lang}
-                />
+                {editorPane}
               </div>
             )}
 
             {layout === 'preview-only' && (
               <div className="flex-1 h-full overflow-hidden animate-in fade-in duration-200">
-                <PreviewPane
-                  bundledHtml={bundledHtml}
-                  consoleMessages={consoleMessages}
-                  onClearConsole={() => setConsoleMessages([])}
-                  lang={lang}
-                />
+                {previewPane}
               </div>
             )}
           </div>

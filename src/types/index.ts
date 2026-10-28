@@ -1,7 +1,7 @@
 export type Language = 'de' | 'en' | 'ar';
 export type AppView = 'dashboard' | 'workspace';
 
-export type FileType = 'html' | 'css' | 'js' | 'json' | 'text' | 'image' | 'folder';
+export type FileType = 'html' | 'css' | 'js' | 'json' | 'text' | 'image';
 
 export interface FileNode {
   id: string;
@@ -42,9 +42,6 @@ export type ModalType =
   | 'rename-node'
   | 'delete-node'
   | 'shortcuts'
-  | 'projects-list'
-  | 'export'
-  | 'import'
   | null;
 
 export interface ModalState {
