@@ -80,7 +80,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-screen w-screen overflow-hidden bg-[#06080e] text-neutral-300 font-light select-none">
+    <div className="flex-1 flex flex-col h-full w-full min-h-0 overflow-hidden bg-[#06080e] text-neutral-300 font-light select-none">
       {/* Sleek Minimal Dashboard Header */}
       <header className="h-14 bg-[#0a0d14]/70 backdrop-blur-2xl border-b border-white/[0.05] px-4 sm:px-8 flex items-center justify-between shrink-0 z-20">
         <div className="flex items-center gap-3">

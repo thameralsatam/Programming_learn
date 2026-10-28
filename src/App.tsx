@@ -544,7 +544,7 @@ export default function App() {
 
   if (viewMode === 'dashboard') {
     return (
-      <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#06080e] text-neutral-300 font-light">
+      <div className="flex flex-col h-full w-full min-h-0 overflow-hidden bg-[#06080e] text-neutral-300 font-light">
         <ProjectsDashboard
           projects={projects}
           currentProjectId={currentProjectId}
@@ -569,7 +569,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#06080e] text-neutral-300 font-light">
+    <div className="flex flex-col h-full w-full min-h-0 overflow-hidden bg-[#06080e] text-neutral-300 font-light">
       {/* Hidden file input for imports */}
       <input
         ref={fileInputRef}
@@ -598,9 +598,9 @@ export default function App() {
       />
 
       {/* Main Workspace Canvas */}
-      <div className="flex-1 flex overflow-hidden relative">
+      <div className="flex-1 flex overflow-hidden relative min-h-0">
         {/* Mobile Viewports (< md) */}
-        <div className="flex md:hidden flex-1 flex-col h-full overflow-hidden">
+        <div className="flex md:hidden flex-1 flex-col h-full overflow-hidden min-h-0">
           {mobileTab === 'editor' && (
             <div className="flex-1 h-full overflow-hidden animate-in fade-in duration-150">
               {editorPane}
