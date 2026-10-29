@@ -12,6 +12,7 @@ import { EditorPane } from './components/EditorPane';
 import { PreviewPane } from './components/PreviewPane';
 import { Modals } from './components/Modals';
 import { ProjectsDashboard } from './components/ProjectsDashboard';
+import { PaneErrorBoundary } from './components/PaneErrorBoundary';
 
 const STORAGE_PROJECTS_KEY = 'studio_lab_projects_v2';
 const STORAGE_CURRENT_PROJECT_KEY = 'studio_lab_current_id_v2';
@@ -88,6 +89,7 @@ function saveProjects(list: Project[]): boolean {
 export default function App() {
   const [viewMode, setViewMode] = useState<AppView>('dashboard');
   const [lang, setLang] = useState<Language>(getInitialLanguage);
+  const t = translations[lang];
   const [isSaved, setIsSaved] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [layout, setLayout] = useState<LayoutMode>(() => {
@@ -586,28 +588,31 @@ export default function App() {
     return () => window.clearTimeout(id);
   }, [bundledHtml]);
 
-  const t = translations[lang];
 
   // Memoized editor and preview panes
   const editorPane = (
-    <EditorPane
-      files={currentProject.files}
-      activeFileId={currentProject.activeFileId}
-      openFileIds={currentProject.openFileIds}
-      onSelectFile={handleSelectFile}
-      onCloseFile={handleCloseFile}
-      onContentChange={handleContentChange}
-      lang={lang}
-    />
+    <PaneErrorBoundary title="Editor Error">
+      <EditorPane
+        files={currentProject.files}
+        activeFileId={currentProject.activeFileId}
+        openFileIds={currentProject.openFileIds}
+        onSelectFile={handleSelectFile}
+        onCloseFile={handleCloseFile}
+        onContentChange={handleContentChange}
+        lang={lang}
+      />
+    </PaneErrorBoundary>
   );
 
   const previewPane = (
-    <PreviewPane
-      bundledHtml={previewHtml}
-      consoleMessages={consoleMessages}
-      onClearConsole={() => setConsoleMessages([])}
-      lang={lang}
-    />
+    <PaneErrorBoundary title="Preview Error">
+      <PreviewPane
+        bundledHtml={previewHtml}
+        consoleMessages={consoleMessages}
+        onClearConsole={() => setConsoleMessages([])}
+        lang={lang}
+      />
+    </PaneErrorBoundary>
   );
 
   if (viewMode === 'dashboard') {
