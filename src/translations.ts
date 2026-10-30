@@ -313,9 +313,20 @@ export function getInitialLanguage(): Language {
   try {
     const saved = localStorage.getItem('studio_lab_lang');
     if (saved === 'de' || saved === 'en' || saved === 'ar') return saved;
-    const nav = (navigator.language || '').toLowerCase();
-    if (nav.startsWith('ar')) return 'ar';
-    if (nav.startsWith('en')) return 'en';
+
+    const navLangs = [
+      navigator.language,
+      ...(Array.isArray(navigator.languages) ? navigator.languages : [])
+    ].filter(Boolean);
+
+    for (const l of navLangs) {
+      const lower = l.toLowerCase();
+      if (lower.startsWith('de')) return 'de';
+      if (lower.startsWith('ar')) return 'ar';
+      if (lower.startsWith('en')) return 'en';
+    }
+
+    // Fallback if browser uses a language not supported by the app
     return 'de';
   } catch {
     return 'de';
